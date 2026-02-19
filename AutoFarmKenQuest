@@ -1,0 +1,149 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+local player = Players.LocalPlayer
+
+-- 設定項目
+local targetPos = Vector3.new(-2846.61499, 41.0549393, 2067.58838)
+local moveSpeed = 100 
+local waitTimeAfterMove = 2 
+local finalWaitTime = 11.5 
+
+-- スクリプト本体を文字列として保存 (サーバーホップ用)
+local scriptSource = [[
+    repeat task.wait() until game:IsLoaded()
+    -- ここにこのスクリプトの全内容を記述
+    -- ※実際の運用ではエグゼキュータのAuto-executeフォルダにこのファイルを保存するのが最も確実です。
+]]
+
+-- 実績のあるチーム変更コード
+local function runUserTeamChange()
+    local teamName = "Marines"
+    local function tryBloxFruits()
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        if remotes and remotes:FindFirstChild("CommF_") then
+            remotes.CommF_:InvokeServer("SetTeam", "Marines")
+            return true
+        end
+        return false
+    end
+    local function tryGeneral()
+        local team = game.Teams:FindFirstChild(teamName)
+        if team then
+            player.Team = team
+            return true
+        end
+        return false
+    end
+    if not tryBloxFruits() then tryGeneral() end
+end
+
+-- Tween移動関数
+local function tweenTo(pos)
+    local character = player.Character or player.CharacterAdded:Wait()
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    local distance = (rootPart.Position - pos).Magnitude
+    local duration = distance / moveSpeed
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = CFrame.new(pos)})
+    tween:Play()
+    return tween
+end
+
+-- 最も近いTraineeを探す
+local function getClosestTrainee()
+    local closest = nil
+    local dist = math.huge
+    local folders = {workspace:FindFirstChild("Enemies"), workspace:FindFirstChild("NPCs"), workspace}
+    for _, folder in pairs(folders) do
+        if folder then
+            for _, npc in pairs(folder:GetChildren()) do
+                if npc.Name:find("Trainee") and npc:FindFirstChild("HumanoidRootPart") then
+                    local d = (player.Character.HumanoidRootPart.Position - npc.HumanoidRootPart.Position).Magnitude
+                    if d < dist then
+                        dist = d
+                        closest = npc
+                    end
+                end
+            end
+        end
+    end
+    return closest
+end
+
+-- サーバーホップ
+local function serverHop()
+    print("サーバーホップを実行中...")
+    
+    -- 永続化の予約 (queue_on_teleport)
+    local qot = (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or (getgenv and getgenv().queue_on_teleport) or queue_on_teleport
+    if qot then
+        -- ※重要: iPhoneなどのモバイル環境では、このスクリプトを「Auto-execute」に登録するのが最も確実です。
+        qot([[
+            repeat task.wait() until game:IsLoaded()
+        ]])
+    end
+    
+    local servers = {}
+    local url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
+    local success, result = pcall(function() return HttpService:JSONDecode(game:HttpGet(url)) end)
+    if success and result and result.data then
+        for _, server in pairs(result.data) do
+            if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                table.insert(servers, server.id)
+            end
+        end
+    end
+    if #servers > 0 then
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], player)
+    else
+        TeleportService:Teleport(game.PlaceId, player)
+    end
+end
+
+-- メイン実行フロー
+task.spawn(function()
+    -- 0. 読み込み待ち & 海軍確定
+    repeat
+        runUserTeamChange()
+        task.wait(2)
+    until player.Team ~= nil and player.Team.Name == "Marines"
+    print("チームがMarinesに確定しました。")
+
+    task.wait(3) 
+    
+    -- 1. 指定座標へ移動
+    print("指定座標へ移動中...")
+    local t1 = tweenTo(targetPos)
+    t1.Completed:Wait()
+    
+    -- 2. 座標に到着後、きっちり2秒間待機
+    -- この間に外部のオートクリッカーで「見聞色」を起動させてください
+    print("座標に到着しました。2秒間待機します...")
+    task.wait(waitTimeAfterMove)
+    
+    -- 3. Traineeへ移動 + インタラクト
+    local trainee = getClosestTrainee()
+    if trainee then
+        print("Traineeへ接近中...")
+        local t2 = tweenTo(trainee.HumanoidRootPart.Position)
+        task.spawn(function()
+            task.wait(0.5)
+            -- Eキー入力を1回シミュレート
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+            task.wait(0.1)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+        end)
+        t2.Completed:Wait()
+    end
+    
+    -- 4. 11.5秒待機
+    task.wait(finalWaitTime)
+    
+    -- 5. サーバーホップ
+    serverHop()
+end)
