@@ -1,0 +1,3 @@
+if not game:IsLoaded() then game.Loaded:Wait() end
+task.wait(2)
+loadstring(game:HttpGet("https://raw.githubusercontent.com/BROsaikyou/BloxFruits/refs/heads/main/AutoFarmKenQuest" ))()
