@@ -6047,13 +6047,13 @@ local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
 local btn = Instance.new("TextButton", gui)
 btn.Size = UDim2.new(0, 180, 0, 40)
 btn.Position = UDim2.new(0.5, -90, 0.05, 0)
-btn.Text = "Targeter: ON"
+btn.Text = "AIMBOT: ON"
 btn.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
 btn.TextColor3 = Color3.new(1, 1, 1)
 
 btn.MouseButton1Click:Connect(function()
     State.Enabled = not State.Enabled
-    btn.Text = State.Enabled and "Targeter: ON" or "Targeter: OFF"
+    btn.Text = State.Enabled and "AIMBOT: ON" or "AIMBOT: OFF"
     btn.BackgroundColor3 = State.Enabled and Color3.fromRGB(0, 180, 0) or Color3.fromRGB(180, 0, 0)
 end)
 end}
