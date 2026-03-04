@@ -93,7 +93,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 _G.FastAttackEnabled = true
-_G.AttackRange = 60
+_G.AttackRange = 50000
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "FastAttackGUI"
 ScreenGui.Parent = CoreGui
@@ -203,7 +203,7 @@ local function ExecuteAttack()
     if not tool then return end
     local range = _G.AttackRange
     if char:FindFirstChild("HumanoidRootPart") and char.HumanoidRootPart:FindFirstChild("Buddha") then
-        range = 1000
+        range = 50000
     end
     local targets = GetTargetsInRange(range)
     if #targets == 0 then return end
@@ -246,7 +246,6 @@ task.spawn(function()
         task.wait(0.1)
     end
 end)
-print("Simplified Fast Attack Script Loaded.")
  end},
     {Name = "張り付き", Script = function() local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
