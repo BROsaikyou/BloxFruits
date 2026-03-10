@@ -1,3 +1,4 @@
+
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local TopBar = Instance.new("Frame")
@@ -19,8 +20,8 @@ MiniMap.BorderSizePixel = 0
 MiniMap.Position = UDim2.new(0,10,0.5,-20)
 MiniMap.Size = UDim2.new(0,40,0,40)
 MiniMap.Font = Enum.Font.SourceSansBold
-MiniMap.Text = "B"
-MiniMap.TextColor3 = Color3.fromRGB(0,255,150)
+MiniMap.Text = "SEX"
+MiniMap.TextColor3 = Color3.fromRGB(255,255,255)
 MiniMap.TextSize = 20
 MiniMap.Visible = false
 
