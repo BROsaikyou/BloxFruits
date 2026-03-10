@@ -1,4 +1,3 @@
-
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local TopBar = Instance.new("Frame")
