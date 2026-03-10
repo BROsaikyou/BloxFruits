@@ -19,7 +19,7 @@ MiniMap.BorderSizePixel = 0
 MiniMap.Position = UDim2.new(0,10,0.5,-20)
 MiniMap.Size = UDim2.new(0,40,0,40)
 MiniMap.Font = Enum.Font.SourceSansBold
-MiniMap.Text = "SEX"
+MiniMap.Text = "😅"
 MiniMap.TextColor3 = Color3.fromRGB(255,255,255)
 MiniMap.TextSize = 20
 MiniMap.Visible = false
@@ -126,6 +126,8 @@ local Functions = {
 	{Name = "霧削除", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/RemoveFog'))()
  end},
 	{Name = "視点無限ズームアウト", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/CameraZoom'))() 
+ end},
+    {Name = "冷笑ボタン(笑)😅", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/Reishou'))()
  end}
 }
 
