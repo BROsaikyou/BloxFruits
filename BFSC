@@ -129,6 +129,10 @@ local Functions = {
  end},
     {Name = "冷笑ボタン(笑)😅", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/Reishou'))()
  end}
+    {Name = "ドラゴン技の色変更", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/DragonVFXColorChange'))()
+ end}
+    {Name = "キツネ技の色変更", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/KitsuneVFXColorChange'))()
+ end}
 }
 
 for _,data in ipairs(Functions) do
