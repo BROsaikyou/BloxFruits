@@ -128,9 +128,9 @@ local Functions = {
 	{Name = "視点無限ズームアウト", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/CameraZoom'))() 
  end},
     {Name = "冷笑ボタン(笑)😅", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/Reishou'))()
- end}
+ end},
     {Name = "ドラゴン技の色変更", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/DragonVFXColorChange'))()
- end}
+ end},
     {Name = "キツネ技の色変更", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/KitsuneVFXColorChange'))()
  end}
 }
