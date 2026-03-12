@@ -2,25 +2,25 @@ local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local TopBar = Instance.new("Frame")
 local Title = Instance.new("TextLabel")
-local MinButton = Instance.new("TextButton") -- メインの閉じるボタンはテキストのまま
+local MinButton = Instance.new("TextButton")
 local ContentFrame = Instance.new("ScrollingFrame")
 local UIListLayout = Instance.new("UIListLayout")
 local UIPadding = Instance.new("UIPadding")
-local MiniMap = Instance.new("ImageButton") -- 閉じた時のボタンを画像に変更
+local MiniMap = Instance.new("ImageButton") -- 表示・非表示を切り替えるメインのアイコン
 
 ScreenGui.Name = "PremiumHub_V11"
 ScreenGui.Parent = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
--- MiniMap (閉じた時のボタン) の設定
+-- MiniMap (表示・非表示を切り替えるアイコン) の設定
 MiniMap.Name = "MiniMap"
 MiniMap.Parent = ScreenGui
 MiniMap.BackgroundColor3 = Color3.fromRGB(255,255,255)
 MiniMap.BorderSizePixel = 0
 MiniMap.Position = UDim2.new(0,10,0.5,-20)
 MiniMap.Size = UDim2.new(0,50,0,50)
-MiniMap.Image = "rbxassetid://14963584666"
-MiniMap.Visible = false
+MiniMap.Image = "rbxassetid://14963584666" -- アイコン画像
+MiniMap.Visible = true -- 常に表示されるように設定（または必要に応じて変更可能）
 
 local MiniCorner = Instance.new("UICorner")
 MiniCorner.CornerRadius = UDim.new(1,0)
@@ -34,12 +34,13 @@ MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5,-125,0.5,-150)
 MainFrame.Size = UDim2.new(0,250,0,320)
 MainFrame.Active = true
+MainFrame.Visible = false -- 最初は非表示
 
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0,12)
 MainCorner.Parent = MainFrame
 
--- ドラッグ機能の実装 (最新の推奨方法)
+-- ドラッグ機能の実装
 local UserInputService = game:GetService("UserInputService")
 
 local function MakeDraggable(frame)
@@ -93,7 +94,7 @@ Title.TextColor3 = Color3.fromRGB(255,255,255)
 Title.TextSize = 14
 Title.TextXAlignment = Enum.TextXAlignment.Left
 
--- メインの閉じるボタン (テキスト形式)
+-- メインフレーム内の閉じるボタン (アイコン化ボタン)
 MinButton.Parent = TopBar
 MinButton.BackgroundTransparency = 1
 MinButton.Position = UDim2.new(1,-35,0,0)
@@ -119,15 +120,17 @@ UIPadding.PaddingLeft = UDim.new(0,12)
 UIPadding.PaddingRight = UDim.new(0,12)
 UIPadding.PaddingTop = UDim.new(0,5)
 
--- クリックイベント
+-- クリックイベント (一括切り替え)
+local function ToggleGUI()
+    MainFrame.Visible = not MainFrame.Visible
+end
+
+-- アイコンをクリックしたときにGUIを表示/非表示
+MiniMap.MouseButton1Click:Connect(ToggleGUI)
+
+-- GUI内の閉じるボタンをクリックしたときにGUIを隠す
 MinButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
-    MiniMap.Visible = true
-end)
-
-MiniMap.MouseButton1Click:Connect(function()
-    MainFrame.Visible = true
-    MiniMap.Visible = false
 end)
 
 -- 機能リスト
