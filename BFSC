@@ -2,32 +2,31 @@ local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local TopBar = Instance.new("Frame")
 local Title = Instance.new("TextLabel")
-local MinButton = Instance.new("TextButton")
+local MinButton = Instance.new("TextButton") -- メインの閉じるボタンはテキストのまま
 local ContentFrame = Instance.new("ScrollingFrame")
 local UIListLayout = Instance.new("UIListLayout")
 local UIPadding = Instance.new("UIPadding")
-local MiniMap = Instance.new("TextButton")
+local MiniMap = Instance.new("ImageButton") -- 閉じた時のボタンを画像に変更
 
 ScreenGui.Name = "PremiumHub_V11"
 ScreenGui.Parent = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
+-- MiniMap (閉じた時のボタン) の設定
 MiniMap.Name = "MiniMap"
 MiniMap.Parent = ScreenGui
-MiniMap.BackgroundColor3 = Color3.fromRGB(25,25,25)
+MiniMap.BackgroundColor3 = Color3.fromRGB(255,255,255)
 MiniMap.BorderSizePixel = 0
 MiniMap.Position = UDim2.new(0,10,0.5,-20)
-MiniMap.Size = UDim2.new(0,40,0,40)
-MiniMap.Font = Enum.Font.SourceSansBold
-MiniMap.Text = "😅"
-MiniMap.TextColor3 = Color3.fromRGB(255,255,255)
-MiniMap.TextSize = 20
+MiniMap.Size = UDim2.new(0,65,0,65)
+MiniMap.Image = "rbxassetid://14963584666"
 MiniMap.Visible = false
 
 local MiniCorner = Instance.new("UICorner")
 MiniCorner.CornerRadius = UDim.new(1,0)
 MiniCorner.Parent = MiniMap
 
+-- メインフレームの設定
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15,15,15)
@@ -35,12 +34,49 @@ MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5,-125,0.5,-150)
 MainFrame.Size = UDim2.new(0,250,0,320)
 MainFrame.Active = true
-MainFrame.Draggable = true
 
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0,12)
 MainCorner.Parent = MainFrame
 
+-- ドラッグ機能の実装 (最新の推奨方法)
+local UserInputService = game:GetService("UserInputService")
+
+local function MakeDraggable(frame)
+    local dragging, dragInput, dragStart, startPos
+
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+MakeDraggable(MainFrame)
+MakeDraggable(MiniMap)
+
+-- TopBarの設定
 TopBar.Name = "TopBar"
 TopBar.Parent = MainFrame
 TopBar.BackgroundColor3 = Color3.fromRGB(20,20,20)
@@ -57,6 +93,7 @@ Title.TextColor3 = Color3.fromRGB(255,255,255)
 Title.TextSize = 14
 Title.TextXAlignment = Enum.TextXAlignment.Left
 
+-- メインの閉じるボタン (テキスト形式)
 MinButton.Parent = TopBar
 MinButton.BackgroundTransparency = 1
 MinButton.Position = UDim2.new(1,-35,0,0)
@@ -82,6 +119,7 @@ UIPadding.PaddingLeft = UDim.new(0,12)
 UIPadding.PaddingRight = UDim.new(0,12)
 UIPadding.PaddingTop = UDim.new(0,5)
 
+-- クリックイベント
 MinButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
     MiniMap.Visible = true
@@ -92,47 +130,28 @@ MiniMap.MouseButton1Click:Connect(function()
     MiniMap.Visible = false
 end)
 
+-- 機能リスト
 local Functions = {
-    {Name = "iruka hub", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/IrukaHub'))()
- end},
-    {Name = "Fast Attack", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/FastAttack'))()
- end},
-    {Name = "張り付き", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/Harituki'))()
- end},
-    {Name = "Aimbot", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/AimBot'))()
- end},
-    {Name = "System Broken", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/SystemBroken'))()
- end},
-    {Name = "判定固定", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/HanteiKotei'))()
- end},
-    {Name = "ワンパン", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/Wanpan'))()
- end},
-    {Name = "FLY GUI", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/FlyGuiV3'))()
- end},
-    {Name = "テレポート(Sea3)", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/Sea3TeleportGUI'))()
- end},
-    {Name = "船レ妨害", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/FunereBougai'))()
- end},
-    {Name = "M1 Dummy", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/M1Dummy'))()
- end},
-    {Name = "AIMBOT(MOBILE)", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/BFMobileSilentAim'))()
- end},
-    {Name = "FPS Limiter", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/FPSLimiter'))()
- end},
-    {Name = "再参加", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/RejoinGUI'))()
- end},
-	{Name = "オートv3,v4", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/AutoActivateV4'))()
- end},
-	{Name = "霧削除", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/RemoveFog'))()
- end},
-	{Name = "視点無限ズームアウト", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/CameraZoom'))() 
- end},
-    {Name = "冷笑ボタン(笑)😅", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/Reishou'))()
- end},
-    {Name = "ドラゴン技の色変更", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/DragonVFXColorChange'))()
- end},
-    {Name = "キツネ技の色変更", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/KitsuneVFXColorChange'))()
- end}
+    {Name = "iruka hub", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/IrukaHub'))() end},
+    {Name = "Fast Attack", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/FastAttack'))() end},
+    {Name = "張り付き", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/Harituki'))() end},
+    {Name = "Aimbot", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/AimBot'))() end},
+    {Name = "System Broken", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/SystemBroken'))() end},
+    {Name = "判定固定", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/HanteiKotei'))() end},
+    {Name = "ワンパン", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/Wanpan'))() end},
+    {Name = "FLY GUI", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/FlyGuiV3'))() end},
+    {Name = "テレポート(Sea3)", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/Sea3TeleportGUI'))() end},
+    {Name = "船レ妨害", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/FunereBougai'))() end},
+    {Name = "M1 Dummy", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/M1Dummy'))() end},
+    {Name = "AIMBOT(MOBILE)", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/BFMobileSilentAim'))() end},
+    {Name = "FPS Limiter", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/FPSLimiter'))() end},
+    {Name = "再参加", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/RejoinGUI'))() end},
+    {Name = "オートv3,v4", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/heads/main/AutoActivateV4'))() end},
+    {Name = "霧削除", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/heads/main/RemoveFog'))() end},
+    {Name = "視点無限ズームアウト", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/heads/main/CameraZoom'))() end},
+    {Name = "冷笑ボタン(笑)😅", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/heads/main/Reishou'))() end},
+    {Name = "ドラゴン技の色変更", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/heads/main/DragonVFXColorChange'))() end},
+    {Name = "キツネ技の色変更", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/heads/main/KitsuneVFXColorChange'))() end}
 }
 
 for _,data in ipairs(Functions) do
@@ -168,5 +187,9 @@ for _,data in ipairs(Functions) do
         if not success then
             warn(data.Name.." Error "..tostring(err))
         end
+        
+        task.wait(0.1)
+        Btn.BackgroundColor3 = Color3.fromRGB(25,25,25)
+        Btn.TextColor3 = Color3.fromRGB(200,200,200)
     end)
 end
