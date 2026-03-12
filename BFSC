@@ -137,7 +137,6 @@ end)
 local Functions = {
     {Name = "iruka hub", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/IrukaHub'))() end},
     {Name = "Fast Attack", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/FastAttack'))() end},
-	{Name = "Fast Attack(常時発動)", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/FastAttackAlways'))() end},
     {Name = "張り付き", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/Harituki'))() end},
     {Name = "Aimbot", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/AimBot'))() end},
     {Name = "System Broken", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/SystemBroken'))() end},
@@ -146,6 +145,7 @@ local Functions = {
     {Name = "FLY GUI", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/FlyGuiV3'))() end},
     {Name = "テレポート(Sea3)", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/Sea3TeleportGUI'))() end},
     {Name = "船レ妨害", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/FunereBougai'))() end},
+    {Name = "M1 Dummy", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/M1Dummy'))() end},
     {Name = "AIMBOT(MOBILE)", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/BFMobileSilentAim'))() end},
     {Name = "FPS Limiter", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/FPSLimiter'))() end},
     {Name = "再参加", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/RejoinGUI'))() end},
