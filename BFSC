@@ -154,6 +154,7 @@ local Functions = {
     {Name = "視点無限ズームアウト", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/heads/main/CameraZoom'))() end},
     {Name = "冷笑ボタン(笑)😅", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/heads/main/Reishou'))() end},
     {Name = "ドラゴン技の色変更", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/heads/main/DragonVFXColorChange'))() end},
+    {Name = "test", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/FastAttackAlways'))() end},
     {Name = "キツネ技の色変更", Script = function()loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/heads/main/KitsuneVFXColorChange'))() end}
 }
 
