@@ -28,7 +28,7 @@ MiniMap.Image = "rbxassetid://14963584666"
 MiniMap.Visible = true 
 
 local MiniCorner = Instance.new("UICorner")
-MiniCorner.CornerRadius = UDim.new(1,0)
+MiniCorner.CornerRadius = UDim.new(0,0)
 MiniCorner.Parent = MiniMap
 
 MainFrame.Name = "MainFrame"
