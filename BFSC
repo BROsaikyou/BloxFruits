@@ -41,7 +41,7 @@ MainFrame.Active = true
 MainFrame.Visible = true
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0,12)
+MainCorner.CornerRadius = UDim.new(0,0)
 MainCorner.Parent = MainFrame
 
 local UserInputService = game:GetService("UserInputService")
