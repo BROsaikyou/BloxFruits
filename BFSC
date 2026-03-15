@@ -1,3 +1,4 @@
+print("Hello, World!")
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local TopBar = Instance.new("Frame")
@@ -20,23 +21,24 @@ ScreenGui.ResetOnSpawn = false
 
 MiniMap.Name = "MiniMap"
 MiniMap.Parent = ScreenGui
-MiniMap.BackgroundColor3 = Color3.fromRGB(255,255,255)
+MiniMap.BackgroundColor3 = Color3.fromRGB(0,0,0)
+MiniMap.BackgroundTransparency = 0
 MiniMap.BorderSizePixel = 0
 MiniMap.Position = UDim2.new(0,10,0.5,-20)
 MiniMap.Size = UDim2.new(0,50,0,50)
-MiniMap.Image = "rbxassetid://14963584666"
-MiniMap.Visible = true 
+MiniMap.Image = "rbxassetid://74629550850497"
+MiniMap.Visible = true
 
 local MiniCorner = Instance.new("UICorner")
-MiniCorner.CornerRadius = UDim.new(0,0)
+MiniCorner.CornerRadius = UDim.new(10,10)
 MiniCorner.Parent = MiniMap
 
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(15,15,15)
+MainFrame.BackgroundColor3 = Color3.fromRGB(0,0,0)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5,-125,0.5,-150)
-MainFrame.Size = UDim2.new(0,250,0,320)
+MainFrame.Size = UDim2.new(0,200,0,340)
 MainFrame.Active = true
 MainFrame.Visible = true
 
@@ -72,7 +74,7 @@ MakeDraggable(MiniMap)
 
 TopBar.Name = "TopBar"
 TopBar.Parent = MainFrame
-TopBar.BackgroundColor3 = Color3.fromRGB(20,20,20)
+TopBar.BackgroundColor3 = Color3.fromRGB(0,0,0)
 TopBar.BorderSizePixel = 0
 TopBar.Size = UDim2.new(1,0,0,35)
 
@@ -81,7 +83,7 @@ Title.BackgroundTransparency = 1
 Title.Position = UDim2.new(0,15,0,0)
 Title.Size = UDim2.new(1,-50,1,0)
 Title.Font = Enum.Font.GothamBold
-Title.Text = "PornHub"
+Title.Text = "ちんちんが臭い人は使用禁止🙏"
 Title.TextColor3 = Color3.fromRGB(255,255,255)
 Title.TextSize = 14
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -91,7 +93,7 @@ MinButton.BackgroundTransparency = 1
 MinButton.Position = UDim2.new(1,-35,0,0)
 MinButton.Size = UDim2.new(0,35,1,0)
 MinButton.Font = Enum.Font.GothamBold
-MinButton.Text = "-"
+MinButton.Text = "ー"
 MinButton.TextColor3 = Color3.fromRGB(200,200,200)
 MinButton.TextSize = 20
 
