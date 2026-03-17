@@ -129,6 +129,7 @@ local Functions = {
     {Name = "iruka hub", Category = "Hub", Script = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/IrukaHub'))() end},
     {Name = "Quantum Onyx", Category = "Hub", Script = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/flazhy/QuantumOnyx/refs/heads/main/QuantumOnyx.lua"))() end},
     {Name = "Gravity Hub", Category = "Hub", Script = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Dev-GravityHub/BloxFruit/refs/heads/main/Main.lua"))() end},
+    {Name = "Onion13", Category = "Hub", Script = function() loadstring(game:HttpGet("https://raw.githubusercontent.com/onion132005-bit/esponion.lua/refs/heads/main/onion13v7.lua"))() end},
 
     {Name = "Fast Attack", Category = "Combat", Script = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/FastAttack'))() end},
     {Name = "Fats Attack(常時発動)", Category = "Combat", Script = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/FastAttackAlways'))() end},
