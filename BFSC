@@ -145,6 +145,7 @@ local Functions = {
 	{Name = "オートv3,v4", Category = "Movement / Utility", Script = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/heads/main/AutoActivateV4'))() end},
     {Name = "テレポート(Sea3)", Category = "Movement / Utility", Script = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/Sea3TeleportGUI'))() end},
     {Name = "再参加", Category = "Movement / Utility", Script = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/RejoinGUI'))() end},
+    {Name = "Unbreakable All", Category = "Movement / Utility", Script = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/UnbreakableAll'))() end},
 
     {Name = "霧削除", Category = "Visual", Script = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/heads/main/RemoveFog'))() end},
     {Name = "視点無限ズームアウト", Category = "Visual", Script = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/heads/main/CameraZoom'))() end},
