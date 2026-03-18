@@ -139,7 +139,6 @@ local Functions = {
     {Name = "判定固定", Category = "Combat", Script = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/HanteiKotei'))() end},
     {Name = "ワンパン", Category = "Combat", Script = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/Wanpan'))() end},
     {Name = "AIMBOT(MOBILE)", Category = "Combat", Script = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/BFMobileSilentAim'))() end},
-    {Name = "Unbreakable All", Category = "Combat", Script = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/UnbreakableAll'))() end},
 
     {Name = "FLY GUI", Category = "Movement / Utility", Script = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/refs/heads/main/FlyGuiV3'))() end},
 	{Name = "オートv3,v4", Category = "Movement / Utility", Script = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/BROsaikyou/Script/heads/main/AutoActivateV4'))() end},
