@@ -8,7 +8,12 @@ local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 
--- === 1. チーム自動選択（エラー対策版） ===
+local TARGET_PLACE_ID = 2753915549
+if game.PlaceId ~= TARGET_PLACE_ID then
+    player:Kick("ファーストシーで使用してください。")
+    return
+end
+
 local function runUserTeamChange()
     local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
     local commF = remotes and remotes:WaitForChild("CommF_", 10)
@@ -30,20 +35,17 @@ end
 
 runUserTeamChange()
 
--- === 2. キャラクターとRootPartのロード待ち ===
 local character = player.Character or player.CharacterAdded:Wait()
 local rootPart = character:WaitForChild("HumanoidRootPart", 15)
 local humanoid = character:WaitForChild("Humanoid", 15)
 
-task.wait(2) -- スポーン後の安定待ち
+task.wait(2)
 
--- === 設定項目 ===
 local TARGET_POS = Vector3.new(5437, 111, 4765)
 local MOVE_SPEED = 300
 local ATTRIBUTE_NAME = "KenDodgesLeft"
 local REMOTE_PATH = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommE")
 
--- === 3. 1秒ごとに "Ken", true を強制実行 ===
 task.spawn(function()
     while true do
         pcall(function()
@@ -55,7 +57,6 @@ task.spawn(function()
     end
 end)
 
--- === 4. Tween移動（Noclip有効化） ===
 local function moveToTarget()
     if not rootPart or not rootPart.Parent then return end
 
@@ -71,51 +72,42 @@ local function moveToTarget()
     local distance = (rootPart.Position - TARGET_POS).Magnitude
     local duration = distance / MOVE_SPEED
     local tween = TweenService:Create(rootPart, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = CFrame.new(TARGET_POS)})
-    
-    print("Tween移動開始...")
+
     tween:Play()
     tween.Completed:Wait()
     
     noclip = false
     noclipConnection:Disconnect()
-    print("目標座標に到達しました。")
 end
 
 pcall(moveToTarget)
 
--- === 5. 2秒間待機（アンカーオンで完全固定） ===
 if rootPart and humanoid then
-    rootPart.Anchored = true -- 物理固定
+    rootPart.Anchored = true
     humanoid.WalkSpeed = 0
     humanoid.JumpPower = 0
-    print("アンカーON：2秒間待機します。")
 end
 
 task.wait(2)
 
 if rootPart and humanoid then
-    rootPart.Anchored = false -- 固定解除
+    rootPart.Anchored = false
     humanoid.WalkSpeed = 16
     humanoid.JumpPower = 50
-    print("アンカーOFF：追従を開始します。")
 end
 
--- === 6. ターゲットに張り付き ===
 local stickConnection
 stickConnection = RunService.Heartbeat:Connect(function()
     pcall(function()
         local enemyFolder = Workspace:FindFirstChild("Enemies")
         local target = enemyFolder and enemyFolder:FindFirstChild("Galley Captain")
-        -- アンカーが解除されている場合のみ座標更新
         if target and target:FindFirstChild("HumanoidRootPart") and rootPart and not rootPart.Anchored then
             rootPart.CFrame = target.HumanoidRootPart.CFrame
         end
     end)
 end)
 
--- === 7. サーバーホップ（低人数優先） ===
 local function serverHop()
-    print("サーバー移動を開始します...")
     local api = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"
     
     while task.wait(3) do
@@ -124,7 +116,6 @@ local function serverHop()
         end)
         
         if success and result and result.data then
-            -- 人数が少ない順にソート
             table.sort(result.data, function(a, b) return a.playing < b.playing end)
             
             for _, server in ipairs(result.data) do
@@ -139,16 +130,13 @@ local function serverHop()
     end
 end
 
--- === 8. 属性監視 ＆ 実行 ===
 player:GetAttributeChangedSignal(ATTRIBUTE_NAME):Connect(function()
     if player:GetAttribute(ATTRIBUTE_NAME) == 0 then
-        print("属性が0になりました。")
         if stickConnection then stickConnection:Disconnect() end
         serverHop()
     end
 end)
 
--- 初回チェック
 if player:GetAttribute(ATTRIBUTE_NAME) == 0 then
     serverHop()
 end
