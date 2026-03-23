@@ -39,7 +39,7 @@ task.wait(2) -- スポーン後の安定待ち
 
 -- === 設定項目 ===
 local TARGET_POS = Vector3.new(5437, 111, 4765)
-local MOVE_SPEED = 150 
+local MOVE_SPEED = 300
 local ATTRIBUTE_NAME = "KenDodgesLeft"
 local REMOTE_PATH = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommE")
 
