@@ -3,12 +3,17 @@ local localPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
--- [[ 1. 状態管理用の変数を、GUIの上のほう（LocalPlayerの下など）に置く ]]
+
+-- [[ 状態管理用変数 ]]
 local UnbreakableActive = false
 local UnbreakableConns = {}
+local StealthActive = false
+local FreezePos = nil
+local CamPart = nil
+local HIDE_Y = -1000
 
--- [[ サイレントエイム用ロジック（追加分） ]]
-local AimState = { Target = nil, isHooked = false, Connection = nil }
+-- [[ サイレントエイム用ロジック ]]
+local AimState = { Target = nil, isHooked = false }
 local mt = getrawmetatable(game)
 local oldNamecall = mt.__namecall
 local oldIndex = mt.__index
@@ -26,14 +31,136 @@ local function getNearest()
     return near
 end
 
+-- [[ 1. 初期設定 & UI基盤（モバイル最適化サイズ） ]]
+local UI_SIZE = UDim2.new(0, 480, 0, 320) 
+local MAIN_BG = Color3.fromRGB(15, 15, 15)
+local ACCENT_COLOR = Color3.fromRGB(0, 140, 255)
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "YAJU_HUB_FINAL_FIX"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = localPlayer:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UI_SIZE
+MainFrame.Position = UDim2.new(0.5, -240, 0.5, -160)
+MainFrame.BackgroundColor3 = MAIN_BG
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Parent = ScreenGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+
+-- 右上の閉じるボタン
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 30, 0, 30); CloseBtn.Position = UDim2.new(1, -35, 0, 5); CloseBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35); CloseBtn.Text = "×"; CloseBtn.TextColor3 = Color3.fromRGB(255, 50, 50); CloseBtn.TextSize = 20; CloseBtn.Font = Enum.Font.GothamBold; CloseBtn.Parent = MainFrame
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+-- スムーズドラッグ
+local draggingHub, dragStartHub, startPosHub
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        local guiObjects = localPlayer.PlayerGui:GetGuiObjectsAtPosition(input.Position.X, input.Position.Y)
+        local canDrag = true
+        for _, obj in pairs(guiObjects) do if obj:IsA("TextButton") or obj:IsA("ScrollingFrame") then if obj == MainFrame then canDrag = true else canDrag = false break end end end
+        if canDrag then draggingHub = true; dragStartHub = input.Position; startPosHub = MainFrame.Position end
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if draggingHub and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStartHub
+        MainFrame.Position = UDim2.new(startPosHub.X.Scale, startPosHub.X.Offset + delta.X, startPosHub.Y.Scale, startPosHub.Y.Offset + delta.Y)
+    end
+end)
+UserInputService.InputEnded:Connect(function() draggingHub = false end)
+
+-- レイアウト設定
+local Sidebar = Instance.new("ScrollingFrame")
+Sidebar.Size = UDim2.new(0, 110, 1, -60); Sidebar.Position = UDim2.new(0, 10, 0, 45); Sidebar.BackgroundTransparency = 1; Sidebar.ScrollBarThickness = 0; Sidebar.AutomaticCanvasSize = Enum.AutomaticSize.Y; Sidebar.Parent = MainFrame
+Instance.new("UIListLayout", Sidebar).Padding = UDim.new(0, 5)
+
+local Container = Instance.new("Frame")
+Container.Size = UDim2.new(1, -140, 1, -65); Container.Position = UDim2.new(0, 130, 0, 50); Container.BackgroundColor3 = Color3.fromRGB(22, 22, 22); Container.Parent = MainFrame
+Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 10)
+
+local tabPages, tabButtons = {}, {}
+
+local function AddToggle(page, text, callback)
+    local TFrame = Instance.new("TextButton")
+    TFrame.Size = UDim2.new(0.96, 0, 0, 38); TFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30); TFrame.Text = ""; TFrame.Parent = page
+    Instance.new("UICorner", TFrame).CornerRadius = UDim.new(0, 6)
+    local TLabel = Instance.new("TextLabel")
+    TLabel.Text = text; TLabel.Font = Enum.Font.GothamSemibold; TLabel.TextSize = 11; TLabel.TextColor3 = Color3.new(1,1,1); TLabel.Position = UDim2.new(0, 10, 0, 0); TLabel.Size = UDim2.new(0.6, 0, 1, 0); TLabel.BackgroundTransparency = 1; TLabel.TextXAlignment = Enum.TextXAlignment.Left; TLabel.Parent = TFrame
+    local Switch = Instance.new("Frame")
+    Switch.Size = UDim2.new(0, 30, 0, 14); Switch.Position = UDim2.new(1, -40, 0.5, -7); Switch.BackgroundColor3 = Color3.fromRGB(60, 60, 60); Switch.Parent = TFrame
+    Instance.new("UICorner", Switch).CornerRadius = UDim.new(1, 0)
+    local Knob = Instance.new("Frame")
+    Knob.Size = UDim2.new(0, 10, 0, 10); Knob.Position = UDim2.new(0, 2, 0.5, -5); Knob.BackgroundColor3 = Color3.new(1,1,1); Knob.Parent = Switch
+    Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
+    local enabled = false
+    TFrame.MouseButton1Click:Connect(function()
+        enabled = not enabled
+        Switch.BackgroundColor3 = enabled and ACCENT_COLOR or Color3.fromRGB(60, 60, 60)
+        Knob.Position = enabled and UDim2.new(1, -12, 0.5, -5) or UDim2.new(0, 2, 0.5, -5)
+        callback(enabled)
+    end)
+end
+
+local function AddScriptButton(page, text, desc, callback)
+    local SFrame = Instance.new("TextButton")
+    SFrame.Size = UDim2.new(0.96, 0, 0, 45); SFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35); SFrame.Text = ""; SFrame.Parent = page
+    Instance.new("UICorner", SFrame).CornerRadius = UDim.new(0, 6)
+    local STitle = Instance.new("TextLabel")
+    STitle.Text = text; STitle.Font = Enum.Font.GothamBold; STitle.TextSize = 12; STitle.TextColor3 = ACCENT_COLOR; STitle.Position = UDim2.new(0, 10, 0, 6); STitle.Size = UDim2.new(1, -20, 0, 15); STitle.BackgroundTransparency = 1; STitle.TextXAlignment = Enum.TextXAlignment.Left; STitle.Parent = SFrame
+    local SDesc = Instance.new("TextLabel")
+    SDesc.Text = desc; SDesc.Font = Enum.Font.Gotham; SDesc.TextSize = 9; SDesc.TextColor3 = Color3.new(0.8,0.8,0.8); SDesc.Position = UDim2.new(0, 10, 0, 22); SDesc.Size = UDim2.new(1, -20, 0, 15); SDesc.BackgroundTransparency = 1; SDesc.TextXAlignment = Enum.TextXAlignment.Left; SDesc.Parent = SFrame
+    SFrame.MouseButton1Click:Connect(callback)
+end
+
+local function CreateTab(name, isFirst)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 32); btn.BackgroundColor3 = isFirst and ACCENT_COLOR or Color3.fromRGB(30, 30, 30); btn.Text = name; btn.Font = Enum.Font.GothamBold; btn.TextSize = 12; btn.TextColor3 = Color3.new(1,1,1); btn.Parent = Sidebar
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    local page = Instance.new("ScrollingFrame")
+    page.Size = UDim2.new(1, -10, 1, -10); page.Position = UDim2.new(0, 5, 0, 5); page.BackgroundTransparency = 1; page.Visible = isFirst; page.AutomaticCanvasSize = Enum.AutomaticSize.Y; page.ScrollBarThickness = 2; page.Parent = Container
+    Instance.new("UIListLayout", page).Padding = UDim.new(0, 5); table.insert(tabPages, page); table.insert(tabButtons, btn)
+    btn.MouseButton1Click:Connect(function()
+        for _, p in ipairs(tabPages) do p.Visible = false end
+        for _, b in ipairs(tabButtons) do b.BackgroundColor3 = Color3.fromRGB(30, 30, 30) end
+        page.Visible = true; btn.BackgroundColor3 = ACCENT_COLOR
+    end)
+    return page
+end
+-- [[ 2/3: 各タブのコンテンツ実装 ]]
+
+-- 1. Mainタブのコンテンツ
+AddToggle(MainTab, "Unbreakable All", function(state)
+    UnbreakableActive = state
+    for _, v in pairs(UnbreakableConns) do v:Disconnect() end
+    UnbreakableConns = {}
+    if state then
+        local function h(obj)
+            if not obj then return end
+            table.insert(UnbreakableConns, obj:GetAttributeChangedSignal("UnbreakableAll"):Connect(function() 
+                if UnbreakableActive and obj:GetAttribute("UnbreakableAll") ~= true then obj:SetAttribute("UnbreakableAll", true) end 
+            end))
+            obj:SetAttribute("UnbreakableAll", true)
+        end
+        h(localPlayer.Character); local f = workspace:FindFirstChild(localPlayer.Name) if f then h(f) end
+    else
+        if localPlayer.Character then localPlayer.Character:SetAttribute("UnbreakableAll", nil) end
+    end
+end)
+
+-- 2. Combatタブのコンテンツ
 local function EnableAimbot()
     if AimState.isHooked then return end
     AimState.isHooked = true
     setreadonly(mt, false)
     mt.__namecall = newcclosure(function(self, ...)
         local args = {...}
-        local method = getnamecallmethod()
-        if method == "FireServer" and self.Name == "RemoteEvent" then -- ゲームに合わせて調整が必要
+        if getnamecallmethod() == "FireServer" and self.Name == "RemoteEvent" then
             local t = getNearest()
             if t then args[1] = t.Position end
         end
@@ -49,200 +176,158 @@ local function EnableAimbot()
     setreadonly(mt, true)
 end
 
--- [[ 1. 初期設定 & UI基盤 ]]
-local UI_SIZE = UDim2.new(0, 480, 0, 320) -- モバイル向けコンパクトサイズ
-local MAIN_BG = Color3.fromRGB(15, 15, 15)
-local ACCENT_COLOR = Color3.fromRGB(0, 140, 255)
+AddToggle(CombatTab, "Silent Aim (Nearest)", function(s)
+    if s then EnableAimbot() else AimState.isHooked = false end
+end)
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "YAJU_HUB_FIXED_SIZE"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = localPlayer:WaitForChild("PlayerGui")
+_G.FA, _G.V3, _G.V4 = false, false, false
+AddToggle(CombatTab, "Fast Attack", function(s) _G.FA = s end)
+AddToggle(CombatTab, "Auto Race V3", function(s) _G.V3 = s end)
+AddToggle(CombatTab, "Auto Race V4", function(s) _G.V4 = s end)
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UI_SIZE
-MainFrame.Position = UDim2.new(0.5, -240, 0.5, -160)
-MainFrame.BackgroundColor3 = MAIN_BG
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Parent = ScreenGui
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
-
--- [[ 2. スムーズドラッグ実装 ]]
-local draggingHub, dragStartHub, startPosHub
-MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        local guiObjects = localPlayer.PlayerGui:GetGuiObjectsAtPosition(input.Position.X, input.Position.Y)
-        local canDrag = true
-        for _, obj in pairs(guiObjects) do
-            if obj:IsA("TextButton") or obj:IsA("ScrollingFrame") or obj:IsA("TextBox") then
-                if obj == MainFrame then canDrag = true else canDrag = false break end
-            end
-        end
-        if canDrag then draggingHub = true; dragStartHub = input.Position; startPosHub = MainFrame.Position end
+RunService.Heartbeat:Connect(function()
+    if _G.V3 then ReplicatedStorage.Remotes.CommE:FireServer("ActivateAbility") end
+    if _G.V4 then 
+        local e = localPlayer.Character and localPlayer.Character:FindFirstChild("RaceEnergy")
+        if e and e.Value >= 1 then ReplicatedStorage.Remotes.CommE:FireServer("ActivateAbility") end
     end
 end)
-UserInputService.InputChanged:Connect(function(input)
-    if draggingHub and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStartHub
-        MainFrame.Position = UDim2.new(startPosHub.X.Scale, startPosHub.X.Offset + delta.X, startPosHub.Y.Scale, startPosHub.Y.Offset + delta.Y)
-    end
-end)
-UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingHub = false end end)
 
--- [[ 3. レイアウト要素 ]]
-local Title = Instance.new("TextLabel")
-Title.Text = "YAJU HUB"; Title.Font = Enum.Font.GothamBold; Title.TextSize = 20; Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Position = UDim2.new(0, 15, 0, 10); Title.Size = UDim2.new(0, 200, 0, 30); Title.BackgroundTransparency = 1; Title.TextXAlignment = Enum.TextXAlignment.Left; Title.Parent = MainFrame
-
-local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 110, 1, -60); Sidebar.Position = UDim2.new(0, 10, 0, 45); Sidebar.BackgroundTransparency = 1; Sidebar.Parent = MainFrame
-Instance.new("UIListLayout", Sidebar).Padding = UDim.new(0, 5)
-
-local Container = Instance.new("Frame")
-Container.Size = UDim2.new(1, -140, 1, -65); Container.Position = UDim2.new(0, 130, 0, 50); Container.BackgroundColor3 = Color3.fromRGB(22, 22, 22); Container.Parent = MainFrame
-Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 10)
-
-local tabPages, tabButtons = {}, {}
-
-local function AddToggle(page, text, callback)
-    local TFrame = Instance.new("TextButton")
-    TFrame.Size = UDim2.new(0.96, 0, 0, 40); TFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30); TFrame.Text = ""; TFrame.AutoButtonColor = false; TFrame.Parent = page
-    Instance.new("UICorner", TFrame).CornerRadius = UDim.new(0, 8)
-    local TLabel = Instance.new("TextLabel")
-    TLabel.Text = text; TLabel.Font = Enum.Font.GothamSemibold; TLabel.TextSize = 13; TLabel.TextColor3 = Color3.fromRGB(255, 255, 255); TLabel.Position = UDim2.new(0, 12, 0, 0); TLabel.Size = UDim2.new(0.6, 0, 1, 0); TLabel.BackgroundTransparency = 1; TLabel.TextXAlignment = Enum.TextXAlignment.Left; TLabel.Parent = TFrame
-    local Switch = Instance.new("Frame")
-    Switch.Size = UDim2.new(0, 34, 0, 16); Switch.Position = UDim2.new(1, -45, 0.5, -8); Switch.BackgroundColor3 = Color3.fromRGB(60, 60, 60); Switch.Parent = TFrame
-    Instance.new("UICorner", Switch).CornerRadius = UDim.new(1, 0)
-    local Knob = Instance.new("Frame")
-    Knob.Size = UDim2.new(0, 12, 0, 12); Knob.Position = UDim2.new(0, 2, 0.5, -6); Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255); Knob.Parent = Switch
-    Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
-    local enabled = false
-    TFrame.MouseButton1Click:Connect(function()
-        enabled = not enabled
-        Switch.BackgroundColor3 = enabled and ACCENT_COLOR or Color3.fromRGB(60, 60, 60)
-        Knob.Position = enabled and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
-        callback(enabled)
-    end)
-end
-
-local function AddScriptButton(page, text, desc, callback)
-    local SFrame = Instance.new("TextButton")
-    SFrame.Size = UDim2.new(0.96, 0, 0, 50); SFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35); SFrame.Text = ""; SFrame.AutoButtonColor = true; SFrame.Parent = page
-    Instance.new("UICorner", SFrame).CornerRadius = UDim.new(0, 8)
-    local STitle = Instance.new("TextLabel")
-    STitle.Text = text; STitle.Font = Enum.Font.GothamBold; STitle.TextSize = 14; STitle.TextColor3 = ACCENT_COLOR; STitle.Position = UDim2.new(0, 12, 0, 8); STitle.Size = UDim2.new(0.9, 0, 0, 15); STitle.BackgroundTransparency = 1; STitle.TextXAlignment = Enum.TextXAlignment.Left; STitle.Parent = SFrame
-    local SDesc = Instance.new("TextLabel")
-    SDesc.Text = desc; SDesc.Font = Enum.Font.Gotham; SDesc.TextSize = 10; SDesc.TextColor3 = Color3.fromRGB(200, 200, 200); SDesc.Position = UDim2.new(0, 12, 0, 25); SDesc.Size = UDim2.new(0.9, 0, 0, 15); SDesc.BackgroundTransparency = 1; SDesc.TextXAlignment = Enum.TextXAlignment.Left; SDesc.Parent = SFrame
-    SFrame.MouseButton1Click:Connect(callback)
-end
-
-local function CreateTab(name, isFirst)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 36); btn.BackgroundColor3 = isFirst and ACCENT_COLOR or Color3.fromRGB(30, 30, 30)
-    btn.Text = name; btn.Font = Enum.Font.GothamBold; btn.TextSize = 14; btn.TextColor3 = Color3.fromRGB(255, 255, 255); btn.Parent = Sidebar
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-    local page = Instance.new("ScrollingFrame")
-    page.Size = UDim2.new(1, -10, 1, -10); page.Position = UDim2.new(0, 5, 0, 5); page.BackgroundTransparency = 1; page.Visible = isFirst; page.AutomaticCanvasSize = Enum.AutomaticSize.Y; page.ScrollBarThickness = 0; page.Parent = Container
-    Instance.new("UIListLayout", page).Padding = UDim.new(0, 8); table.insert(tabPages, page); table.insert(tabButtons, btn)
-    btn.MouseButton1Click:Connect(function()
-        for _, p in ipairs(tabPages) do p.Visible = false end
-        for _, b in ipairs(tabButtons) do b.BackgroundColor3 = Color3.fromRGB(30, 30, 30) end
-        page.Visible = true; btn.BackgroundColor3 = ACCENT_COLOR
-    end)
-    return page
-end
-
--- [[ 4. 各機能タブ作成 ]]
-local MainTab = CreateTab("Main", true)
-local CombatTab = CreateTab("Combat", false)
-local HaritsukiTab = CreateTab("張り付き", false)
-local PlayerTab = CreateTab("Player", false)
-
--- [[ 5. 張り付き機能（サイズ調整済み） ]]
+-- 3. 張り付きタブのコンテンツ (サイズ調整済み)
 local TargetPlayerName = ""
 local TargetResetBtn = Instance.new("TextButton", HaritsukiTab)
-TargetResetBtn.Size = UDim2.new(0.96, 0, 0, 32); TargetResetBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0); TargetResetBtn.Text = "ターゲットをリセット"
-TargetResetBtn.TextColor3 = Color3.fromRGB(255, 255, 255); TargetResetBtn.Font = Enum.Font.GothamBold; TargetResetBtn.TextSize = 13; Instance.new("UICorner", TargetResetBtn)
+TargetResetBtn.Size = UDim2.new(0.96, 0, 0, 30)
+TargetResetBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+TargetResetBtn.Text = "ターゲットリセット"
+TargetResetBtn.TextColor3 = Color3.new(1,1,1)
+TargetResetBtn.Font = Enum.Font.GothamBold
+TargetResetBtn.TextSize = 12
+Instance.new("UICorner", TargetResetBtn).CornerRadius = UDim.new(0, 6)
 
 local PlayerScroll = Instance.new("ScrollingFrame", HaritsukiTab)
-PlayerScroll.Size = UDim2.new(0.96, 0, 0, 100) -- リストの高さを調整
-PlayerScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 20); PlayerScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y; PlayerScroll.ScrollBarThickness = 2
-Instance.new("UIListLayout", PlayerScroll); Instance.new("UICorner", PlayerScroll)
+PlayerScroll.Size = UDim2.new(0.96, 0, 0, 115) -- リストの高さを調整
+PlayerScroll.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+PlayerScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+PlayerScroll.ScrollBarThickness = 2
+Instance.new("UIListLayout", PlayerScroll).Padding = UDim.new(0, 2)
+Instance.new("UICorner", PlayerScroll)
 
 local function RefreshPlayerList()
     for _, child in pairs(PlayerScroll:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= localPlayer then
             local pBtn = Instance.new("TextButton", PlayerScroll)
-            pBtn.Size = UDim2.new(1, 0, 0, 28); pBtn.BackgroundColor3 = (TargetPlayerName == p.Name) and ACCENT_COLOR or Color3.fromRGB(30, 30, 30)
-            pBtn.Text = p.DisplayName .. " (@" .. p.Name .. ")"; pBtn.TextColor3 = Color3.new(1,1,1); pBtn.TextSize = 12; pBtn.Font = Enum.Font.Gotham
+            pBtn.Size = UDim2.new(1, 0, 0, 26)
+            pBtn.BackgroundColor3 = (TargetPlayerName == p.Name) and ACCENT_COLOR or Color3.fromRGB(35, 35, 35)
+            pBtn.Text = p.DisplayName
+            pBtn.TextColor3 = Color3.new(1,1,1)
+            pBtn.TextSize = 11
+            pBtn.Font = Enum.Font.Gotham
+            Instance.new("UICorner", pBtn).CornerRadius = UDim.new(0, 4)
             pBtn.MouseButton1Click:Connect(function() TargetPlayerName = p.Name; RefreshPlayerList() end)
         end
     end
 end
 RefreshPlayerList()
 TargetResetBtn.MouseButton1Click:Connect(function() TargetPlayerName = ""; RefreshPlayerList() end)
+-- [[ 3/3: Playerタブ・ステルス機能・最終セットアップ ]]
 
--- [[ 6. Combat & Main 機能実装 ]]
-_G.FastAttack = false
-_G.AutoRaceV3 = false
-_G.AutoRaceV4 = false
-
-AddToggle(CombatTab, "Fast Attack", function(s) _G.FastAttack = s end)
-AddToggle(CombatTab, "Auto Race V3", function(s) _G.AutoRaceV3 = s end)
-AddToggle(CombatTab, "Auto Race V4", function(s) _G.AutoRaceV4 = s end)
-
-RunService.Heartbeat:Connect(function()
-    if _G.AutoRaceV3 then ReplicatedStorage.Remotes.CommE:FireServer("ActivateAbility") end
-    if _G.AutoRaceV4 then 
-        local energy = localPlayer.Character:FindFirstChild("RaceEnergy")
-        if energy and energy.Value >= 1 then ReplicatedStorage.Remotes.CommE:FireServer("ActivateAbility") end
+-- 4. Playerタブのコンテンツ
+AddScriptButton(PlayerTab, "Change Team", "海賊または海軍に切り替えます", function()
+    local commF = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
+    if commF then
+        local myTeam = localPlayer.Team and localPlayer.Team.Name or ""
+        if not string.find(myTeam, "Pirates") then 
+            commF:InvokeServer("SetTeam", "Pirates") 
+        else 
+            commF:InvokeServer("SetTeam", "Marines") 
+        end
     end
 end)
 
-AddToggle(MainTab, "水上歩行", function(s)
+AddToggle(PlayerTab, "水上歩行", function(s)
+    -- マップ構造に合わせて調整
     local water = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("WaterBase-Plane")
-    if water then water.Size = s and Vector3.new(1000, 112, 1000) or Vector3.new(1000, 1, 1000) end
-end)
-
-local TeleportGui = Instance.new("ScreenGui", localPlayer.PlayerGui); TeleportGui.Enabled = false
-local TPBtn = Instance.new("TextButton", TeleportGui); TPBtn.Size = UDim2.new(0, 40, 0, 40); TPBtn.Position = UDim2.new(0, 10, 0, 200); TPBtn.Text = "👻"; TPBtn.BackgroundColor3 = Color3.fromRGB(30,30,30); Instance.new("UICorner", TPBtn)
-TPBtn.MouseButton1Click:Connect(function() localPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(918, 252, 32928) end)
-AddToggle(MainTab, "TPボタン表示", function(s) TeleportGui.Enabled = s end)
-
-local function startUnbreakable()
-    local function hook(obj)
-        if not obj then return end
-        table.insert(UnbreakableConns, obj:GetAttributeChangedSignal("UnbreakableAll"):Connect(function()
-            if UnbreakableActive and obj:GetAttribute("UnbreakableAll") ~= true then obj:SetAttribute("UnbreakableAll", true) end
-        end))
-        if UnbreakableActive then obj:SetAttribute("UnbreakableAll", true) end
+    if water then 
+        water.Size = s and Vector3.new(1000, 112, 1000) or Vector3.new(1000, 1, 1000) 
     end
-    table.insert(UnbreakableConns, localPlayer.CharacterAdded:Connect(hook))
-    table.insert(UnbreakableConns, workspace.ChildAdded:Connect(function(child) if child.Name == localPlayer.Name then hook(child) end end))
-    hook(localPlayer.Character); local f = workspace:FindFirstChild(localPlayer.Name) if f then hook(f) end
-end
-AddToggle(MainTab, "Unbreakable All", function(state)
-    UnbreakableActive = state
-    for _, v in pairs(UnbreakableConns) do v:Disconnect() end
-    UnbreakableConns = {}
-    if state then startUnbreakable() else if localPlayer.Character then localPlayer.Character:SetAttribute("UnbreakableAll", nil) end end
 end)
 
--- [[ 7. GUI切り替えボタンの実装 ]]
-local ToggleButton = Instance.new("ImageButton")
-local Corner = Instance.new("UICorner")
-ToggleButton.Name = "YAJU_Toggle"
-ToggleButton.Parent = ScreenGui
-ToggleButton.Size = UDim2.new(0, 45, 0, 45); ToggleButton.Position = UDim2.new(0.02, 0, 0.4, 0); ToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30); ToggleButton.BorderSizePixel = 0; ToggleButton.Active = true; ToggleButton.Draggable = true
-ToggleButton.Image = "rbxassetid://14963584666" 
-Corner.CornerRadius = UDim.new(0, 10); Corner.Parent = ToggleButton
+-- 5. ステルス機能の実装 (ボタン表示と連動)
+local S_Gui = Instance.new("ScreenGui", localPlayer.PlayerGui)
+S_Gui.Name = "YAJU_Stealth_UI"
+S_Gui.Enabled = false
 
-local menuVisible = true
-MainFrame.Visible = menuVisible
-ToggleButton.MouseButton1Click:Connect(function()
-    menuVisible = not menuVisible
-    MainFrame.Visible = menuVisible
+local S_Btn = Instance.new("TextButton", S_Gui)
+S_Btn.Size = UDim2.new(0, 45, 0, 45)
+S_Btn.Position = UDim2.new(0.5, -22, 0.5, 60)
+S_Btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+S_Btn.Text = "OFF"
+S_Btn.TextColor3 = Color3.new(1, 1, 1)
+S_Btn.Font = Enum.Font.GothamBold
+S_Btn.TextSize = 14
+Instance.new("UICorner", S_Btn).CornerRadius = UDim.new(0, 8)
+S_Btn.Draggable = true
+
+S_Btn.MouseButton1Click:Connect(function()
+    local char = localPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    
+    StealthActive = not StealthActive
+    if StealthActive then
+        FreezePos = char.HumanoidRootPart.CFrame
+        S_Btn.Text = "ON"
+        S_Btn.TextColor3 = Color3.fromRGB(255, 50, 50)
+        
+        -- カメラ固定用のダミーパーツ作成
+        CamPart = Instance.new("Part", workspace)
+        CamPart.Transparency = 1
+        CamPart.Anchored = true
+        CamPart.CanCollide = false
+        CamPart.CFrame = FreezePos
+        workspace.CurrentCamera.CameraSubject = CamPart
+        
+        -- キャラクターを地底へ飛ばして固定
+        task.spawn(function()
+            while StealthActive and char:FindFirstChild("HumanoidRootPart") do
+                char.HumanoidRootPart.CFrame = CFrame.new(FreezePos.X, HIDE_Y, FreezePos.Z)
+                char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
+                task.wait()
+            end
+        end)
+    else
+        S_Btn.Text = "OFF"
+        S_Btn.TextColor3 = Color3.new(1, 1, 1)
+        if CamPart then CamPart:Destroy() end
+        char.HumanoidRootPart.CFrame = FreezePos
+        workspace.CurrentCamera.CameraSubject = char.Humanoid
+    end
 end)
+
+AddToggle(MainTab, "ステルスボタン表示", function(s) 
+    S_Gui.Enabled = s 
+end)
+
+-- 6. GUI切り替えボタン（アイコン）の最終設定
+local ToggleBtn = Instance.new("ImageButton", ScreenGui)
+ToggleBtn.Name = "YAJU_Toggle_Icon"
+ToggleBtn.Size = UDim2.new(0, 45, 0, 45)
+ToggleBtn.Position = UDim2.new(0.02, 0, 0.4, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ToggleBtn.Image = "rbxassetid://14963584666" 
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 10)
+
+ToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+    -- クリック時の視覚効果
+    local originalSize = ToggleBtn.Size
+    ToggleBtn.Size = UDim2.new(0, 40, 0, 40)
+    task.wait(0.1)
+    ToggleBtn.Size = originalSize
+end)
+
+-- 初期表示設定
+MainFrame.Visible = true
+print("YAJU HUB: 全機能ロード完了 (サイズ調整済み)")
