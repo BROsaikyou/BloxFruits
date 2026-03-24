@@ -28,58 +28,46 @@ end
 
 local function EnableAimbot()
     if AimState.isHooked then return end
+    AimState.isHooked = true
     setreadonly(mt, false)
     mt.__namecall = newcclosure(function(self, ...)
-        local method = getnamecallmethod()
         local args = {...}
-        if method == "FireServer" and AimState.Target then
-            for i, v in ipairs(args) do if typeof(v) == "Vector3" then args[i] = AimState.Target.Position end end
-            return oldNamecall(self, unpack(args))
+        local method = getnamecallmethod()
+        if method == "FireServer" and self.Name == "RemoteEvent" then -- ゲームに合わせて調整が必要
+            local t = getNearest()
+            if t then args[1] = t.Position end
         end
-        return oldNamecall(self, ...)
+        return oldNamecall(self, unpack(args))
     end)
     mt.__index = newcclosure(function(self, key)
-        if key == "FireServer" then
-            return newcclosure(function(remote, ...)
-                local args = {...}
-                if AimState.Target then for i, v in ipairs(args) do if typeof(v) == "Vector3" then args[i] = AimState.Target.Position end end end
-                return oldNamecall(remote, unpack(args))
-            end)
+        if key == "Hit" and self:IsA("Mouse") then
+            local t = getNearest()
+            if t then return t.CFrame end
         end
         return oldIndex(self, key)
     end)
     setreadonly(mt, true)
-    AimState.Connection = RunService.Heartbeat:Connect(function() AimState.Target = getNearest() end)
-    AimState.isHooked = true
 end
 
-local function DisableAimbot()
-    if not AimState.isHooked then return end
-    setreadonly(mt, false)
-    mt.__namecall = oldNamecall; mt.__index = oldIndex
-    setreadonly(mt, true)
-    if AimState.Connection then AimState.Connection:Disconnect() end
-    AimState.Target = nil; AimState.isHooked = false
-end
 -- [[ 1. 初期設定 & UI基盤 ]]
-local UI_SIZE = UDim2.new(0, 460, 0, 300) 
+local UI_SIZE = UDim2.new(0, 480, 0, 320) -- モバイル向けコンパクトサイズ
 local MAIN_BG = Color3.fromRGB(15, 15, 15)
 local ACCENT_COLOR = Color3.fromRGB(0, 140, 255)
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "YAJU_HUB_FINAL_FIXED"
+ScreenGui.Name = "YAJU_HUB_FIXED_SIZE"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = localPlayer:WaitForChild("PlayerGui")
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UI_SIZE
-MainFrame.Position = UDim2.new(0.5, -382, 0.5, -255)
+MainFrame.Position = UDim2.new(0.5, -240, 0.5, -160)
 MainFrame.BackgroundColor3 = MAIN_BG
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Parent = ScreenGui
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 20)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
 -- [[ 2. スムーズドラッグ実装 ]]
 local draggingHub, dragStartHub, startPosHub
@@ -105,60 +93,59 @@ UserInputService.InputEnded:Connect(function(input) if input.UserInputType == En
 
 -- [[ 3. レイアウト要素 ]]
 local Title = Instance.new("TextLabel")
-Title.Text = "YAJU HUB"; Title.Font = Enum.Font.GothamBold; Title.TextSize = 28; Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Position = UDim2.new(0, 25, 0, 25); Title.Size = UDim2.new(0, 300, 0, 40); Title.BackgroundTransparency = 1; Title.TextXAlignment = Enum.TextXAlignment.Left; Title.Parent = MainFrame
+Title.Text = "YAJU HUB"; Title.Font = Enum.Font.GothamBold; Title.TextSize = 20; Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Position = UDim2.new(0, 15, 0, 10); Title.Size = UDim2.new(0, 200, 0, 30); Title.BackgroundTransparency = 1; Title.TextXAlignment = Enum.TextXAlignment.Left; Title.Parent = MainFrame
 
 local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 110, 1, -60); Sidebar.Position = UDim2.new(0, 10, 0, 85); Sidebar.BackgroundTransparency = 1; Sidebar.Parent = MainFrame
-Instance.new("UIListLayout", Sidebar).Padding = UDim.new(0, 10)
+Sidebar.Size = UDim2.new(0, 110, 1, -60); Sidebar.Position = UDim2.new(0, 10, 0, 45); Sidebar.BackgroundTransparency = 1; Sidebar.Parent = MainFrame
+Instance.new("UIListLayout", Sidebar).Padding = UDim.new(0, 5)
 
 local Container = Instance.new("Frame")
-Container.Size = UDim2.new(1, -135, 1, -55); Container.Position = UDim2.new(0, 125, 0, 45); Container.BackgroundColor3 = Color3.fromRGB(22, 22, 22); Container.Parent = MainFrame
-Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 15)
+Container.Size = UDim2.new(1, -140, 1, -65); Container.Position = UDim2.new(0, 130, 0, 50); Container.BackgroundColor3 = Color3.fromRGB(22, 22, 22); Container.Parent = MainFrame
+Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 10)
 
 local tabPages, tabButtons = {}, {}
 
 local function AddToggle(page, text, callback)
     local TFrame = Instance.new("TextButton")
-    TFrame.Size = UDim2.new(0.95, 0, 0, 50); TFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30); TFrame.Text = ""; TFrame.AutoButtonColor = false; TFrame.Parent = page
-    Instance.new("UICorner", TFrame).CornerRadius = UDim.new(0, 12)
+    TFrame.Size = UDim2.new(0.96, 0, 0, 40); TFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30); TFrame.Text = ""; TFrame.AutoButtonColor = false; TFrame.Parent = page
+    Instance.new("UICorner", TFrame).CornerRadius = UDim.new(0, 8)
     local TLabel = Instance.new("TextLabel")
-    TLabel.Text = text; TLabel.Font = Enum.Font.GothamSemibold; TLabel.TextSize = 18; TLabel.TextColor3 = Color3.fromRGB(255, 255, 255); TLabel.Position = UDim2.new(0, 15, 0, 0); TLabel.Size = UDim2.new(0.6, 0, 1, 0); TLabel.BackgroundTransparency = 1; TLabel.TextXAlignment = Enum.TextXAlignment.Left; TLabel.Parent = TFrame
+    TLabel.Text = text; TLabel.Font = Enum.Font.GothamSemibold; TLabel.TextSize = 13; TLabel.TextColor3 = Color3.fromRGB(255, 255, 255); TLabel.Position = UDim2.new(0, 12, 0, 0); TLabel.Size = UDim2.new(0.6, 0, 1, 0); TLabel.BackgroundTransparency = 1; TLabel.TextXAlignment = Enum.TextXAlignment.Left; TLabel.Parent = TFrame
     local Switch = Instance.new("Frame")
-    Switch.Size = UDim2.new(0, 44, 0, 22); Switch.Position = UDim2.new(1, -60, 0.5, -11); Switch.BackgroundColor3 = Color3.fromRGB(60, 60, 60); Switch.Parent = TFrame
+    Switch.Size = UDim2.new(0, 34, 0, 16); Switch.Position = UDim2.new(1, -45, 0.5, -8); Switch.BackgroundColor3 = Color3.fromRGB(60, 60, 60); Switch.Parent = TFrame
     Instance.new("UICorner", Switch).CornerRadius = UDim.new(1, 0)
     local Knob = Instance.new("Frame")
-    Knob.Size = UDim2.new(0, 16, 0, 16); Knob.Position = UDim2.new(0, 3, 0.5, -8); Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255); Knob.Parent = Switch
+    Knob.Size = UDim2.new(0, 12, 0, 12); Knob.Position = UDim2.new(0, 2, 0.5, -6); Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255); Knob.Parent = Switch
     Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
     local enabled = false
     TFrame.MouseButton1Click:Connect(function()
         enabled = not enabled
         Switch.BackgroundColor3 = enabled and ACCENT_COLOR or Color3.fromRGB(60, 60, 60)
-        Knob.Position = enabled and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8)
+        Knob.Position = enabled and UDim2.new(1, -14, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
         callback(enabled)
     end)
 end
 
--- スクリプト実行ボタン用関数
 local function AddScriptButton(page, text, desc, callback)
     local SFrame = Instance.new("TextButton")
-    SFrame.Size = UDim2.new(0.95, 0, 0, 60); SFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35); SFrame.Text = ""; SFrame.AutoButtonColor = true; SFrame.Parent = page
-    Instance.new("UICorner", SFrame).CornerRadius = UDim.new(0, 12)
+    SFrame.Size = UDim2.new(0.96, 0, 0, 50); SFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35); SFrame.Text = ""; SFrame.AutoButtonColor = true; SFrame.Parent = page
+    Instance.new("UICorner", SFrame).CornerRadius = UDim.new(0, 8)
     local STitle = Instance.new("TextLabel")
-    STitle.Text = text; STitle.Font = Enum.Font.GothamBold; STitle.TextSize = 16; STitle.TextColor3 = ACCENT_COLOR; STitle.Position = UDim2.new(0, 15, 0, 10); STitle.Size = UDim2.new(0.9, 0, 0, 20); STitle.BackgroundTransparency = 1; STitle.TextXAlignment = Enum.TextXAlignment.Left; STitle.Parent = SFrame
+    STitle.Text = text; STitle.Font = Enum.Font.GothamBold; STitle.TextSize = 14; STitle.TextColor3 = ACCENT_COLOR; STitle.Position = UDim2.new(0, 12, 0, 8); STitle.Size = UDim2.new(0.9, 0, 0, 15); STitle.BackgroundTransparency = 1; STitle.TextXAlignment = Enum.TextXAlignment.Left; STitle.Parent = SFrame
     local SDesc = Instance.new("TextLabel")
-    SDesc.Text = desc; SDesc.Font = Enum.Font.Gotham; SDesc.TextSize = 12; SDesc.TextColor3 = Color3.fromRGB(200, 200, 200); SDesc.Position = UDim2.new(0, 15, 0, 30); SDesc.Size = UDim2.new(0.9, 0, 0, 20); SDesc.BackgroundTransparency = 1; SDesc.TextXAlignment = Enum.TextXAlignment.Left; SDesc.Parent = SFrame
+    SDesc.Text = desc; SDesc.Font = Enum.Font.Gotham; SDesc.TextSize = 10; SDesc.TextColor3 = Color3.fromRGB(200, 200, 200); SDesc.Position = UDim2.new(0, 12, 0, 25); SDesc.Size = UDim2.new(0.9, 0, 0, 15); SDesc.BackgroundTransparency = 1; SDesc.TextXAlignment = Enum.TextXAlignment.Left; SDesc.Parent = SFrame
     SFrame.MouseButton1Click:Connect(callback)
 end
 
 local function CreateTab(name, isFirst)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 45); btn.BackgroundColor3 = isFirst and ACCENT_COLOR or Color3.fromRGB(30, 30, 30)
-    btn.Text = name; btn.Font = Enum.Font.GothamBold; btn.TextSize = 18; btn.TextColor3 = Color3.fromRGB(255, 255, 255); btn.Parent = Sidebar
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    btn.Size = UDim2.new(1, 0, 0, 36); btn.BackgroundColor3 = isFirst and ACCENT_COLOR or Color3.fromRGB(30, 30, 30)
+    btn.Text = name; btn.Font = Enum.Font.GothamBold; btn.TextSize = 14; btn.TextColor3 = Color3.fromRGB(255, 255, 255); btn.Parent = Sidebar
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
     local page = Instance.new("ScrollingFrame")
-    page.Size = UDim2.new(1, -20, 1, -20); page.Position = UDim2.new(0, 10, 0, 10); page.BackgroundTransparency = 1; page.Visible = isFirst; page.AutomaticCanvasSize = Enum.AutomaticSize.Y; page.ScrollBarThickness = 0; page.Parent = Container
-    Instance.new("UIListLayout", page).Padding = UDim.new(0, 10); table.insert(tabPages, page); table.insert(tabButtons, btn)
+    page.Size = UDim2.new(1, -10, 1, -10); page.Position = UDim2.new(0, 5, 0, 5); page.BackgroundTransparency = 1; page.Visible = isFirst; page.AutomaticCanvasSize = Enum.AutomaticSize.Y; page.ScrollBarThickness = 0; page.Parent = Container
+    Instance.new("UIListLayout", page).Padding = UDim.new(0, 8); table.insert(tabPages, page); table.insert(tabButtons, btn)
     btn.MouseButton1Click:Connect(function()
         for _, p in ipairs(tabPages) do p.Visible = false end
         for _, b in ipairs(tabButtons) do b.BackgroundColor3 = Color3.fromRGB(30, 30, 30) end
@@ -167,1013 +154,95 @@ local function CreateTab(name, isFirst)
     return page
 end
 
--- [[ 4. カテゴリ設定 ]]
+-- [[ 4. 各機能タブ作成 ]]
 local MainTab = CreateTab("Main", true)
 local CombatTab = CreateTab("Combat", false)
 local HaritsukiTab = CreateTab("張り付き", false)
-local ScriptTab = CreateTab("Scripts", false)
--- [[ 4. カテゴリ設定 (追記・修正部分) ]]
-local ESPTab = CreateTab("ESP", false) -- ESPタブを新規作成
--- [[ Playerカテゴリの作成 ]]
 local PlayerTab = CreateTab("Player", false)
 
--- --- Change Team (強化版チーム切替) ---
-AddScriptButton(PlayerTab, "Change Team (チーム切替)", "海賊と海軍を交互に切り替えます", function()
-    local player = game:GetService("Players").LocalPlayer
-    local rs = game:GetService("ReplicatedStorage")
-    
-    -- リモートイベントの取得を強化
-    local remotes = rs:FindFirstChild("Remotes")
-    local commF = remotes and remotes:FindFirstChild("CommF_")
-    
-    if commF then
-        pcall(function()
-            -- 現在のチーム判定（Teamオブジェクトがない場合も考慮）
-            local myTeam = player.Team and player.Team.Name or ""
-            
-            if not string.find(myTeam, "Pirates") then
-                -- 海賊でないなら海賊へ
-                commF:InvokeServer("SetTeam", "Pirates")
-            else
-                -- 海賊なら海軍へ
-                commF:InvokeServer("SetTeam", "Marines")
-            end
-        end)
-    else
-        -- 見つからない場合の予備手段（直接パス指定）
-        pcall(function()
-            rs.Remotes.CommF_:InvokeServer("SetTeam", "Pirates")
-        end)
-    end
-end)
--- 状態管理変数
-local WS_Enabled = false
-local WS_Value = 16
-local JP_Enabled = false
-local JP_Value = 50
-local noclipEnabled = false
-
--- --- 1. スイッチと入力がセットになった統合パーツ ---
-local function AddPlayerSetting(page, text, defaultVal, onUpdate)
-    local Frame = Instance.new("Frame")
-    Frame.Size = UDim2.new(0.95, 0, 0, 60); Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30); Frame.Parent = page
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 12)
-
-    local Label = Instance.new("TextLabel")
-    Label.Text = text; Label.Font = Enum.Font.GothamSemibold; Label.TextSize = 16
-    Label.TextColor3 = Color3.new(1,1,1); Label.BackgroundTransparency = 1
-    Label.Position = UDim2.new(0, 15, 0, 0); Label.Size = UDim2.new(0.4, 0, 1, 0)
-    Label.TextXAlignment = Enum.TextXAlignment.Left; Label.Parent = Frame
-
-    local Input = Instance.new("TextBox")
-    Input.Size = UDim2.new(0, 70, 0, 30); Input.Position = UDim2.new(1, -140, 0.5, -15)
-    Input.BackgroundColor3 = Color3.fromRGB(45, 45, 45); Input.Text = tostring(defaultVal)
-    Input.TextColor3 = Color3.new(1, 1, 1); Input.Font = Enum.Font.Gotham; Input.TextSize = 14; Input.Parent = Frame
-    Instance.new("UICorner", Input).CornerRadius = UDim.new(0, 6)
-
-    local Switch = Instance.new("TextButton")
-    Switch.Size = UDim2.new(0, 44, 0, 22); Switch.Position = UDim2.new(1, -60, 0.5, -11)
-    Switch.BackgroundColor3 = Color3.fromRGB(60, 60, 60); Switch.Text = ""; Switch.Parent = Frame
-    Instance.new("UICorner", Switch).CornerRadius = UDim.new(1, 0)
-    
-    local Knob = Instance.new("Frame")
-    Knob.Size = UDim2.new(0, 16, 0, 16); Knob.Position = UDim2.new(0, 3, 0.5, -8)
-    Knob.BackgroundColor3 = Color3.new(1,1,1); Knob.Parent = Switch
-    Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
-
-    local isEnabled = false
-    local currentNum = defaultVal
-
-    Switch.MouseButton1Click:Connect(function()
-        isEnabled = not isEnabled
-        Switch.BackgroundColor3 = isEnabled and ACCENT_COLOR or Color3.fromRGB(60, 60, 60)
-        Knob.Position = isEnabled and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8)
-        onUpdate(isEnabled, currentNum)
-    end)
-
-    Input.FocusLost:Connect(function()
-        currentNum = tonumber(Input.Text) or defaultVal
-        if isEnabled then onUpdate(true, currentNum) end
-    end)
-end
-
--- --- 2. UI要素の配置 ---
-AddToggle(PlayerTab, "Noclip (壁抜け)", function(state)
-    noclipEnabled = state
-    if not state and localPlayer.Character then
-        for _, part in pairs(localPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = true end
-        end
-    end
-end)
-
-AddPlayerSetting(PlayerTab, "WalkSpeed (速度)", 16, function(en, val)
-    WS_Enabled = en
-    WS_Value = val
-    -- OFF時に標準速度へリセット
-    if not en and localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
-        localPlayer.Character.Humanoid.WalkSpeed = 16
-    end
-end)
-
-AddPlayerSetting(PlayerTab, "JumpPower (ジャンプ)", 50, function(en, val)
-    JP_Enabled = en
-    JP_Value = val
-    -- OFF時に標準ジャンプ力へリセット
-    if not en and localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
-        local hum = localPlayer.Character.Humanoid
-        hum.JumpPower = 50
-        -- 一部のゲームではJumpHeightを使っている場合があるため両方リセット
-        if hum:FindFirstChild("JumpHeight") then hum.JumpHeight = 7.2 end 
-    end
-end)
-
--- --- 3. 実行メインロジック ---
-RunService.Stepped:Connect(function()
-    local char = localPlayer.Character
-    local hum = char and char:FindFirstChild("Humanoid")
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    
-    if char and hrp and hum then
-        -- Noclip
-        if noclipEnabled then
-            for _, v in pairs(char:GetDescendants()) do
-                if v:IsA("BasePart") then v.CanCollide = false end
-            end
-        end
-        
-        -- WalkSpeed (自然な移動速度変更)
-        if WS_Enabled then
-            local moveDir = hum.MoveDirection
-            if moveDir.Magnitude > 0 then
-                hrp.Velocity = Vector3.new(moveDir.X * WS_Value, hrp.Velocity.Y, moveDir.Z * WS_Value)
-            end
-        end
-        
-        -- JumpPower (ONの時だけ上書き)
-        if JP_Enabled then
-            hum.UseJumpPower = true
-            hum.JumpPower = JP_Value
-        end
-    end
-end)
--- --- ESP設定とロジックの統合 ---
-local ESP_Settings = {
-    Box = false,
-    Tracer = false,
-    Name = false,
-    Health = false,
-    Distance = false
-}
-
--- ESPタブにトグルを追加
-AddToggle(ESPTab, "Box (ボックス表示)", function(s) ESP_Settings.Box = s end)
-AddToggle(ESPTab, "Tracer (トラッカー表示)", function(s) ESP_Settings.Tracer = s end)
-AddToggle(ESPTab, "Name (名前表示)", function(s) ESP_Settings.Name = s end)
-AddToggle(ESPTab, "Health (体力表示)", function(s) ESP_Settings.Health = s end)
-AddToggle(ESPTab, "Distance (距離表示)", function(s) ESP_Settings.Distance = s end)
-
--- ESPメインロジック (提供されたコードを最適化して組み込み)
-local function createESP(player)
-    if player == localPlayer then return end
-
-    local Box = Drawing.new("Square")
-    local Tracer = Drawing.new("Line")
-    local NameL = Drawing.new("Text")
-    local HealthL = Drawing.new("Text")
-    local DistL = Drawing.new("Text")
-
-    -- テキスト設定
-    for _, txt in pairs({NameL, HealthL, DistL}) do
-        txt.Size = (txt == NameL) and 24 or 20
-        txt.Center = true
-        txt.Outline = true
-        txt.Visible = false
-    end
-
-    local function hideAll()
-        Box.Visible = false; Tracer.Visible = false; NameL.Visible = false; HealthL.Visible = false; DistL.Visible = false
-    end
-
-    local connection
-    connection = RunService.RenderStepped:Connect(function()
-        if not player or not player.Parent then
-            hideAll()
-            Box:Remove(); Tracer:Remove(); NameL:Remove(); HealthL:Remove(); DistL:Remove()
-            connection:Disconnect()
-            return
-        end
-
-        local char = player.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local hum = char and char:FindFirstChild("Humanoid")
-        
-        if hrp and hum and hum.Health > 0 then
-            local pos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position)
-
-            if onScreen then
-                local teamColor = Color3.new(1, 1, 1)
-                local teamName = (player.Team and player.Team.Name) or (player:FindFirstChild("Data") and player.Data:FindFirstChild("Team") and player.Data.Team.Value) or ""
-                if string.find(teamName, "Pirate") then teamColor = Color3.fromRGB(255, 0, 0)
-                elseif string.find(teamName, "Marine") then teamColor = Color3.fromRGB(0, 190, 255) end
-
-                local head_pos = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 3, 0))
-                local leg_pos = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3.5, 0))
-                local height = math.abs(head_pos.Y - leg_pos.Y)
-                local width = height * 0.55
-
-                -- 各種描画の更新 (ESP_Settingsを参照)
-                Box.Visible = ESP_Settings.Box
-                Box.Size = Vector2.new(width, height)
-                Box.Position = Vector2.new(pos.X - width / 2, pos.Y - height / 2)
-                Box.Color = teamColor
-                Box.Thickness = 1
-
-                Tracer.Visible = ESP_Settings.Tracer
-                Tracer.From = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y)
-                Tracer.To = Vector2.new(pos.X, pos.Y + (height / 2))
-                Tracer.Color = teamColor
-
-                NameL.Visible = ESP_Settings.Name
-                NameL.Text = player.DisplayName or player.Name
-                NameL.Position = Vector2.new(pos.X, pos.Y - (height / 2) - 30)
-                NameL.Color = teamColor
-
-                HealthL.Visible = ESP_Settings.Health
-                HealthL.Text = "HP: " .. math.floor(hum.Health)
-                HealthL.Position = Vector2.new(pos.X, pos.Y - (height / 2) - 55)
-                HealthL.Color = Color3.fromRGB(0, 255, 0)
-
-                DistL.Visible = ESP_Settings.Distance
-                local d = math.floor((workspace.CurrentCamera.CFrame.Position - hrp.Position).Magnitude)
-                DistL.Text = d .. "m"
-                DistL.Position = Vector2.new(pos.X, pos.Y + (height / 2) + 10)
-                DistL.Color = Color3.new(1, 1, 1)
-            else
-                hideAll()
-            end
-        else
-            hideAll()
-        end
-    end)
-end
-
-for _, v in pairs(Players:GetPlayers()) do createESP(v) end
-Players.PlayerAdded:Connect(createESP)
-
--- [[ 5. 実行ループ ... 以下、元のスクリプトへ続く ]]
--- Scriptsタブ 実行ボタン
-AddScriptButton(ScriptTab, "FLY GUI", "飛行スクリプトを実行", function()
-    local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-
--- GUI作成
-local main = Instance.new("ScreenGui")
-main.Name = "main"
-main.Parent = LocalPlayer:WaitForChild("PlayerGui")
-main.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-main.ResetOnSpawn = false
-
-local Frame = Instance.new("Frame", main)
-Frame.Size = UDim2.new(0, 190, 0, 57)
-Frame.Position = UDim2.new(0.1, 0, 0.38, 0)
-Frame.Active = true
-Frame.Draggable = true
-Frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-Frame.BackgroundTransparency = 0.1
-
-local function addUICorner(obj, radius)
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0,radius)
-	corner.Parent = obj
-end
-addUICorner(Frame, 10)
-
--- ボタン・ラベル作成関数
-local function createButton(name, parent, size, pos, text, bgColor, textColor, textSize)
-	local btn = Instance.new("TextButton")
-	btn.Name = name
-	btn.Parent = parent
-	btn.Size = size
-	btn.Position = pos
-	btn.Text = text
-	btn.Font = Enum.Font.RobotoMono
-	btn.TextColor3 = textColor
-	btn.TextSize = textSize
-	btn.BackgroundColor3 = bgColor
-	btn.BackgroundTransparency = 0.1
-	addUICorner(btn, 8)
-	return btn
-end
-
-local up = createButton("up", Frame, UDim2.new(0,44,0,28), UDim2.new(0,0,0,0), "UP", Color3.fromRGB(0,0,0), Color3.fromRGB(255,255,255), 14)
-local down = createButton("down", Frame, UDim2.new(0,44,0,28), UDim2.new(0,0,0.49,0), "DOWN", Color3.fromRGB(50,50,50), Color3.fromRGB(255,255,255), 14)
-local onof = createButton("onof", Frame, UDim2.new(0,56,0,28), UDim2.new(0.7,0,0.49,0), "fly", Color3.fromRGB(0,0,0), Color3.fromRGB(255,255,255), 14)
-local plus = createButton("plus", Frame, UDim2.new(0,45,0,28), UDim2.new(0.23,0,0,0), "+", Color3.fromRGB(50,50,50), Color3.fromRGB(255,255,255), 14)
-local mine = createButton("mine", Frame, UDim2.new(0,45,0,29), UDim2.new(0.23,0,0.49,0), "-", Color3.fromRGB(50,50,50), Color3.fromRGB(255,255,255), 14)
-local closebutton = createButton("Close", Frame, UDim2.new(0,45,0,28), UDim2.new(0,0,-1,27), "X", Color3.fromRGB(200,0,0), Color3.fromRGB(255,255,255), 30)
-local mini = createButton("minimize", Frame, UDim2.new(0,45,0,28), UDim2.new(0,44,-1,27), "-", Color3.fromRGB(0,0,0), Color3.fromRGB(255,255,255), 40)
-local mini2 = createButton("minimize2", Frame, UDim2.new(0,45,0,28), UDim2.new(0,44,-1,57), "+", Color3.fromRGB(50,50,50), Color3.fromRGB(255,255,255), 40)
-mini2.Visible = false
-
-local TextLabel = Instance.new("TextLabel", Frame)
-TextLabel.Size = UDim2.new(0,100,0,28)
-TextLabel.Position = UDim2.new(0.47,0,0,0)
-TextLabel.Text = "iruka hub fly"
-TextLabel.Font = Enum.Font.RobotoMono
-TextLabel.TextColor3 = Color3.fromRGB(255,255,255)
-TextLabel.TextScaled = true
-TextLabel.TextWrapped = true
-TextLabel.BackgroundColor3 = Color3.fromRGB(20,20,20)
-TextLabel.BackgroundTransparency = 0.1
-addUICorner(TextLabel, 8)
-
-local speed = Instance.new("TextLabel", Frame)
-speed.Size = UDim2.new(0,44,0,28)
-speed.Position = UDim2.new(0.47,0,0.49,0)
-speed.Text = "1"
-speed.Font = Enum.Font.RobotoMono
-speed.TextColor3 = Color3.fromRGB(255,255,255)
-speed.TextScaled = true
-speed.TextWrapped = true
-speed.BackgroundColor3 = Color3.fromRGB(20,20,20)
-speed.BackgroundTransparency = 0.1
-addUICorner(speed, 8)
-
--- 変数
-local speeds = 1
-local nowe = false
-local speaker = LocalPlayer
-
-onof.MouseButton1Down:connect(function()
-
-	if nowe == true then
-		nowe = false
-
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing,true)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown,true)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Flying,true)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall,true)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp,true)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping,true)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Landed,true)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics,true)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding,true)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll,true)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Running,true)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.RunningNoPhysics,true)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated,true)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.StrafingNoPhysics,true)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming,true)
-		speaker.Character.Humanoid:ChangeState(Enum.HumanoidStateType.RunningNoPhysics)
-	else 
-		nowe = true
-
-
-
-		for i = 1, speeds do
-			spawn(function()
-
-				local hb = game:GetService("RunService").Heartbeat	
-
-
-				tpwalking = true
-				local chr = game.Players.LocalPlayer.Character
-				local hum = chr and chr:FindFirstChildWhichIsA("Humanoid")
-				while tpwalking and hb:Wait() and chr and hum and hum.Parent do
-					if hum.MoveDirection.Magnitude > 0 then
-						chr:TranslateBy(hum.MoveDirection)
-					end
-				end
-
-			end)
-		end
-		game.Players.LocalPlayer.Character.Animate.Disabled = true
-		local Char = game.Players.LocalPlayer.Character
-		local Hum = Char:FindFirstChildOfClass("Humanoid") or Char:FindFirstChildOfClass("AnimationController")
-
-		for i,v in next, Hum:GetPlayingAnimationTracks() do
-			v:AdjustSpeed(0)
-		end
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing,false)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown,false)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Flying,false)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall,false)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp,false)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping,false)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Landed,false)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics,false)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding,false)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll,false)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Running,false)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.RunningNoPhysics,false)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated,false)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.StrafingNoPhysics,false)
-		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming,false)
-		speaker.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Swimming)
-	end
-
-
-
-
-	if game:GetService("Players").LocalPlayer.Character:FindFirstChildOfClass("Humanoid").RigType == Enum.HumanoidRigType.R6 then
-
-
-
-		local plr = game.Players.LocalPlayer
-		local torso = plr.Character.Torso
-		local flying = true
-		local deb = true
-		local ctrl = {f = 0, b = 0, l = 0, r = 0}
-		local lastctrl = {f = 0, b = 0, l = 0, r = 0}
-		local maxspeed = 50
-		local speed = 0
-
-
-		local bg = Instance.new("BodyGyro", torso)
-		bg.P = 9e4
-		bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
-		bg.cframe = torso.CFrame
-		local bv = Instance.new("BodyVelocity", torso)
-		bv.velocity = Vector3.new(0,0.1,0)
-		bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
-		if nowe == true then
-			plr.Character.Humanoid.PlatformStand = true
-		end
-		while nowe == true or game:GetService("Players").LocalPlayer.Character.Humanoid.Health == 0 do
-			game:GetService("RunService").RenderStepped:Wait()
-
-			if ctrl.l + ctrl.r ~= 0 or ctrl.f + ctrl.b ~= 0 then
-				speed = speed+.5+(speed/maxspeed)
-				if speed > maxspeed then
-					speed = maxspeed
-				end
-			elseif not (ctrl.l + ctrl.r ~= 0 or ctrl.f + ctrl.b ~= 0) and speed ~= 0 then
-				speed = speed-1
-				if speed < 0 then
-					speed = 0
-				end
-			end
-			if (ctrl.l + ctrl.r) ~= 0 or (ctrl.f + ctrl.b) ~= 0 then
-				bv.velocity = ((game.Workspace.CurrentCamera.CoordinateFrame.lookVector * (ctrl.f+ctrl.b)) + ((game.Workspace.CurrentCamera.CoordinateFrame * CFrame.new(ctrl.l+ctrl.r,(ctrl.f+ctrl.b)*.2,0).p) - game.Workspace.CurrentCamera.CoordinateFrame.p))*speed
-				lastctrl = {f = ctrl.f, b = ctrl.b, l = ctrl.l, r = ctrl.r}
-			elseif (ctrl.l + ctrl.r) == 0 and (ctrl.f + ctrl.b) == 0 and speed ~= 0 then
-				bv.velocity = ((game.Workspace.CurrentCamera.CoordinateFrame.lookVector * (lastctrl.f+lastctrl.b)) + ((game.Workspace.CurrentCamera.CoordinateFrame * CFrame.new(lastctrl.l+lastctrl.r,(lastctrl.f+lastctrl.b)*.2,0).p) - game.Workspace.CurrentCamera.CoordinateFrame.p))*speed
-			else
-				bv.velocity = Vector3.new(0,0,0)
-			end
-			--	game.Players.LocalPlayer.Character.Animate.Disabled = true
-			bg.cframe = game.Workspace.CurrentCamera.CoordinateFrame * CFrame.Angles(-math.rad((ctrl.f+ctrl.b)*50*speed/maxspeed),0,0)
-		end
-		ctrl = {f = 0, b = 0, l = 0, r = 0}
-		lastctrl = {f = 0, b = 0, l = 0, r = 0}
-		speed = 0
-		bg:Destroy()
-		bv:Destroy()
-		plr.Character.Humanoid.PlatformStand = false
-		game.Players.LocalPlayer.Character.Animate.Disabled = false
-		tpwalking = false
-
-
-
-
-	else
-		local plr = game.Players.LocalPlayer
-		local UpperTorso = plr.Character.UpperTorso
-		local flying = true
-		local deb = true
-		local ctrl = {f = 0, b = 0, l = 0, r = 0}
-		local lastctrl = {f = 0, b = 0, l = 0, r = 0}
-		local maxspeed = 50
-		local speed = 0
-
-
-		local bg = Instance.new("BodyGyro", UpperTorso)
-		bg.P = 9e4
-		bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
-		bg.cframe = UpperTorso.CFrame
-		local bv = Instance.new("BodyVelocity", UpperTorso)
-		bv.velocity = Vector3.new(0,0.1,0)
-		bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
-		if nowe == true then
-			plr.Character.Humanoid.PlatformStand = true
-		end
-		while nowe == true or game:GetService("Players").LocalPlayer.Character.Humanoid.Health == 0 do
-			wait()
-
-			if ctrl.l + ctrl.r ~= 0 or ctrl.f + ctrl.b ~= 0 then
-				speed = speed+.5+(speed/maxspeed)
-				if speed > maxspeed then
-					speed = maxspeed
-				end
-			elseif not (ctrl.l + ctrl.r ~= 0 or ctrl.f + ctrl.b ~= 0) and speed ~= 0 then
-				speed = speed-1
-				if speed < 0 then
-					speed = 0
-				end
-			end
-			if (ctrl.l + ctrl.r) ~= 0 or (ctrl.f + ctrl.b) ~= 0 then
-				bv.velocity = ((game.Workspace.CurrentCamera.CoordinateFrame.lookVector * (ctrl.f+ctrl.b)) + ((game.Workspace.CurrentCamera.CoordinateFrame * CFrame.new(ctrl.l+ctrl.r,(ctrl.f+ctrl.b)*.2,0).p) - game.Workspace.CurrentCamera.CoordinateFrame.p))*speed
-				lastctrl = {f = ctrl.f, b = ctrl.b, l = ctrl.l, r = ctrl.r}
-			elseif (ctrl.l + ctrl.r) == 0 and (ctrl.f + ctrl.b) == 0 and speed ~= 0 then
-				bv.velocity = ((game.Workspace.CurrentCamera.CoordinateFrame.lookVector * (lastctrl.f+lastctrl.b)) + ((game.Workspace.CurrentCamera.CoordinateFrame * CFrame.new(lastctrl.l+lastctrl.r,(lastctrl.f+lastctrl.b)*.2,0).p) - game.Workspace.CurrentCamera.CoordinateFrame.p))*speed
-			else
-				bv.velocity = Vector3.new(0,0,0)
-			end
-
-			bg.cframe = game.Workspace.CurrentCamera.CoordinateFrame * CFrame.Angles(-math.rad((ctrl.f+ctrl.b)*50*speed/maxspeed),0,0)
-		end
-		ctrl = {f = 0, b = 0, l = 0, r = 0}
-		lastctrl = {f = 0, b = 0, l = 0, r = 0}
-		speed = 0
-		bg:Destroy()
-		bv:Destroy()
-		plr.Character.Humanoid.PlatformStand = false
-		game.Players.LocalPlayer.Character.Animate.Disabled = false
-		tpwalking = false
-
-
-
-	end
-
-
-
-
-
-end)
-
-local tis
-
-up.MouseButton1Down:connect(function()
-	tis = up.MouseEnter:connect(function()
-		while tis do
-			wait()
-			game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0,1,0)
-		end
-	end)
-end)
-
-up.MouseLeave:connect(function()
-	if tis then
-		tis:Disconnect()
-		tis = nil
-	end
-end)
-
-local dis
-
-down.MouseButton1Down:connect(function()
-	dis = down.MouseEnter:connect(function()
-		while dis do
-			wait()
-			game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0,-1,0)
-		end
-	end)
-end)
-
-down.MouseLeave:connect(function()
-	if dis then
-		dis:Disconnect()
-		dis = nil
-	end
-end)
-
-
-game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function(char)
-	wait(0.7)
-	game.Players.LocalPlayer.Character.Humanoid.PlatformStand = false
-	game.Players.LocalPlayer.Character.Animate.Disabled = false
-
-end)
-
-
-plus.MouseButton1Down:connect(function()
-	speeds = speeds + 1
-	speed.Text = speeds
-	if nowe == true then
-
-
-		tpwalking = false
-		for i = 1, speeds do
-			spawn(function()
-
-				local hb = game:GetService("RunService").Heartbeat	
-
-
-				tpwalking = true
-				local chr = game.Players.LocalPlayer.Character
-				local hum = chr and chr:FindFirstChildWhichIsA("Humanoid")
-				while tpwalking and hb:Wait() and chr and hum and hum.Parent do
-					if hum.MoveDirection.Magnitude > 0 then
-						chr:TranslateBy(hum.MoveDirection)
-					end
-				end
-
-			end)
-		end
-	end
-end)
-mine.MouseButton1Down:connect(function()
-	if speeds == 1 then
-		speed.Text = 'cannot be less than 1'
-		wait(1)
-		speed.Text = speeds
-	else
-		speeds = speeds - 1
-		speed.Text = speeds
-		if nowe == true then
-			tpwalking = false
-			for i = 1, speeds do
-				spawn(function()
-
-					local hb = game:GetService("RunService").Heartbeat	
-
-
-					tpwalking = true
-					local chr = game.Players.LocalPlayer.Character
-					local hum = chr and chr:FindFirstChildWhichIsA("Humanoid")
-					while tpwalking and hb:Wait() and chr and hum and hum.Parent do
-						if hum.MoveDirection.Magnitude > 0 then
-							chr:TranslateBy(hum.MoveDirection)
-						end
-					end
-
-				end)
-			end
-		end
-	end
-end)
-
-closebutton.MouseButton1Click:Connect(function()
-	main:Destroy()
-end)
-
-mini.MouseButton1Click:Connect(function()
-	up.Visible = false
-	down.Visible = false
-	onof.Visible = false
-	plus.Visible = false
-	speed.Visible = false
-	mine.Visible = false
-	mini.Visible = false
-	mini2.Visible = true
-	main.Frame.BackgroundTransparency = 1
-	closebutton.Position =  UDim2.new(0, 0, -1, 57)
-end)
-
-mini2.MouseButton1Click:Connect(function()
-	up.Visible = true
-	down.Visible = true
-	onof.Visible = true
-	plus.Visible = true
-	speed.Visible = true
-	mine.Visible = true
-	mini.Visible = true
-	mini2.Visible = false
-	main.Frame.BackgroundTransparency = 0 
-	closebutton.Position =  UDim2.new(0, 0, -1, 27)
-end)
-
-end)
-
-
--- --- 張り付き機能 ---
-local H_TargetName, H_Mode, H_Active, H_Speed, H_BtnLocked = "", "TP", false, 300, false
-
-local ResetBtn = Instance.new("TextButton")
-ResetBtn.Size = UDim2.new(0.95, 0, 0, 45); ResetBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50); ResetBtn.Text = "ターゲット解除"; ResetBtn.Font = Enum.Font.GothamBold; ResetBtn.TextSize = 18; ResetBtn.TextColor3 = Color3.fromRGB(255, 255, 255); ResetBtn.Parent = HaritsukiTab
-Instance.new("UICorner", ResetBtn)
-
-local TargetTPBtn = Instance.new("TextButton")
-TargetTPBtn.Size = UDim2.new(0.95, 0, 0, 45); TargetTPBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50); TargetTPBtn.Text = "ターゲットにTP (Y1, Z4)"; TargetTPBtn.Font = Enum.Font.GothamBold; TargetTPBtn.TextSize = 18; TargetTPBtn.TextColor3 = Color3.fromRGB(255, 255, 255); TargetTPBtn.Parent = HaritsukiTab
-Instance.new("UICorner", TargetTPBtn)
-
-TargetTPBtn.MouseButton1Click:Connect(function()
-    if H_TargetName ~= "" then
-        pcall(function()
-            local targetChar = Players[H_TargetName].Character
-            local myChar = localPlayer.Character
-            if targetChar and myChar and targetChar:FindFirstChild("HumanoidRootPart") then
-                myChar.HumanoidRootPart.CFrame = targetChar.HumanoidRootPart.CFrame * CFrame.new(0, 1, 4)
-            end
-        end)
-    end
-end)
-
-local H_Scroll = Instance.new("ScrollingFrame")
-H_Scroll.Size = UDim2.new(0.95, 0, 0, 200); H_Scroll.BackgroundColor3 = Color3.fromRGB(15, 15, 15); H_Scroll.Parent = HaritsukiTab
-Instance.new("UIListLayout", H_Scroll).Padding = UDim.new(0, 8); Instance.new("UICorner", H_Scroll)
-
-local function H_Refresh()
-    for _, v in pairs(H_Scroll:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
+-- [[ 5. 張り付き機能（サイズ調整済み） ]]
+local TargetPlayerName = ""
+local TargetResetBtn = Instance.new("TextButton", HaritsukiTab)
+TargetResetBtn.Size = UDim2.new(0.96, 0, 0, 32); TargetResetBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0); TargetResetBtn.Text = "ターゲットをリセット"
+TargetResetBtn.TextColor3 = Color3.fromRGB(255, 255, 255); TargetResetBtn.Font = Enum.Font.GothamBold; TargetResetBtn.TextSize = 13; Instance.new("UICorner", TargetResetBtn)
+
+local PlayerScroll = Instance.new("ScrollingFrame", HaritsukiTab)
+PlayerScroll.Size = UDim2.new(0.96, 0, 0, 100) -- リストの高さを調整
+PlayerScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 20); PlayerScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y; PlayerScroll.ScrollBarThickness = 2
+Instance.new("UIListLayout", PlayerScroll); Instance.new("UICorner", PlayerScroll)
+
+local function RefreshPlayerList()
+    for _, child in pairs(PlayerScroll:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= localPlayer then
-            local b = Instance.new("TextButton")
-            b.Size = UDim2.new(0.95, 0, 0, 55)
-            b.BackgroundColor3 = (H_TargetName == p.Name) and ACCENT_COLOR or Color3.fromRGB(35, 35, 35)
-            b.Text = p.DisplayName .. " (@" .. p.Name .. ")"; b.Font = Enum.Font.GothamBold; b.TextSize = 20; b.TextColor3 = Color3.fromRGB(255, 255, 255); b.Parent = H_Scroll
-            Instance.new("UICorner", b)
-            b.MouseButton1Click:Connect(function() H_TargetName = p.Name H_Refresh() end)
+            local pBtn = Instance.new("TextButton", PlayerScroll)
+            pBtn.Size = UDim2.new(1, 0, 0, 28); pBtn.BackgroundColor3 = (TargetPlayerName == p.Name) and ACCENT_COLOR or Color3.fromRGB(30, 30, 30)
+            pBtn.Text = p.DisplayName .. " (@" .. p.Name .. ")"; pBtn.TextColor3 = Color3.new(1,1,1); pBtn.TextSize = 12; pBtn.Font = Enum.Font.Gotham
+            pBtn.MouseButton1Click:Connect(function() TargetPlayerName = p.Name; RefreshPlayerList() end)
         end
     end
 end
-H_Refresh()
-ResetBtn.MouseButton1Click:Connect(function() H_TargetName = ""; H_Refresh() end)
-Players.PlayerAdded:Connect(H_Refresh); Players.PlayerRemoving:Connect(H_Refresh)
+RefreshPlayerList()
+TargetResetBtn.MouseButton1Click:Connect(function() TargetPlayerName = ""; RefreshPlayerList() end)
 
-AddToggle(HaritsukiTab, "Tweenモード", function(s) H_Mode = s and "Tween" or "TP" end)
-AddToggle(HaritsukiTab, "HARIボタン固定", function(s) H_BtnLocked = s end)
+-- [[ 6. Combat & Main 機能実装 ]]
+_G.FastAttack = false
+_G.AutoRaceV3 = false
+_G.AutoRaceV4 = false
 
-local H_Gui = Instance.new("ScreenGui"); H_Gui.Enabled = false; H_Gui.Parent = localPlayer.PlayerGui
-local H_Main = Instance.new("TextButton")
-H_Main.Size = UDim2.new(0, 80, 0, 80); H_Main.Position = UDim2.new(0.5, -40, 0.8, 0); H_Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); H_Main.Text = "HARI"; H_Main.Font = Enum.Font.GothamBold; H_Main.TextSize = 20; H_Main.TextColor3 = Color3.fromRGB(200, 50, 50); H_Main.AutoButtonColor = false; H_Main.Parent = H_Gui
-Instance.new("UICorner", H_Main)
+AddToggle(CombatTab, "Fast Attack", function(s) _G.FastAttack = s end)
+AddToggle(CombatTab, "Auto Race V3", function(s) _G.AutoRaceV3 = s end)
+AddToggle(CombatTab, "Auto Race V4", function(s) _G.AutoRaceV4 = s end)
 
-local h_drag, h_start, h_mStart, h_moved
-H_Main.MouseButton1Down:Connect(function() if not H_BtnLocked then h_drag = true; h_start = UserInputService:GetMouseLocation(); h_mStart = H_Main.Position; h_moved = false end end)
-UserInputService.InputChanged:Connect(function(input)
-    if h_drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = UserInputService:GetMouseLocation() - h_start
-        if delta.Magnitude > 3 then h_moved = true end
-        H_Main.Position = UDim2.new(h_mStart.X.Scale, h_mStart.X.Offset + delta.X, h_mStart.Y.Scale, h_mStart.Y.Offset + delta.Y)
-    end
-end)
-H_Main.MouseButton1Up:Connect(function()
-    if not h_moved then H_Active = not H_Active; H_Main.TextColor3 = H_Active and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50) end
-    h_drag = false
-end)
-AddToggle(HaritsukiTab, "操作GUI表示", function(s) H_Gui.Enabled = s end)
-
--- [[ 5. 実行ループ ]]
-RunService.Heartbeat:Connect(function(dt)
-    if H_Active and H_TargetName ~= "" then
-        pcall(function()
-            local tChar = Players[H_TargetName].Character
-            local myChar = localPlayer.Character
-            for _, v in pairs(myChar:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end
-            local goal = tChar.HumanoidRootPart.CFrame 
-            if H_Mode == "TP" then myChar.HumanoidRootPart.CFrame = goal
-            else
-                local dist = (myChar.HumanoidRootPart.Position - goal.Position).Magnitude
-                if dist > 0.1 then myChar.HumanoidRootPart.CFrame = myChar.HumanoidRootPart.CFrame:Lerp(goal, math.min((H_Speed * dt) / dist, 1)) end
-                myChar.HumanoidRootPart.Velocity = Vector3.zero
-            end
-        end)
+RunService.Heartbeat:Connect(function()
+    if _G.AutoRaceV3 then ReplicatedStorage.Remotes.CommE:FireServer("ActivateAbility") end
+    if _G.AutoRaceV4 then 
+        local energy = localPlayer.Character:FindFirstChild("RaceEnergy")
+        if energy and energy.Value >= 1 then ReplicatedStorage.Remotes.CommE:FireServer("ActivateAbility") end
     end
 end)
 
--- --- MainTab 機能 ---
-AddToggle(MainTab, "水上歩行", function(state) 
-    local map = workspace:FindFirstChild("Map")
-    local water = map and map:FindFirstChild("WaterBase-Plane")
-    if water then water.Size = state and Vector3.new(1000, 112, 1000) or Vector3.new(1000, 1, 1000) end
+AddToggle(MainTab, "水上歩行", function(s)
+    local water = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("WaterBase-Plane")
+    if water then water.Size = s and Vector3.new(1000, 112, 1000) or Vector3.new(1000, 1, 1000) end
 end)
 
-AddToggle(MainTab, "マグマ無効", function(state) 
-    local maps = {"CircleIsland", "GhostShipInterior"}
-    local mapFolder = workspace:WaitForChild("Map", 5)
-    if mapFolder then
-        for _, mapName in ipairs(maps) do
-            local map = mapFolder:FindFirstChild(mapName)
-            if map then for _, obj in ipairs(map:GetDescendants()) do if obj.Name == "LavaParts" then obj:Destroy() end end end
-        end
+local TeleportGui = Instance.new("ScreenGui", localPlayer.PlayerGui); TeleportGui.Enabled = false
+local TPBtn = Instance.new("TextButton", TeleportGui); TPBtn.Size = UDim2.new(0, 40, 0, 40); TPBtn.Position = UDim2.new(0, 10, 0, 200); TPBtn.Text = "👻"; TPBtn.BackgroundColor3 = Color3.fromRGB(30,30,30); Instance.new("UICorner", TPBtn)
+TPBtn.MouseButton1Click:Connect(function() localPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(918, 252, 32928) end)
+AddToggle(MainTab, "TPボタン表示", function(s) TeleportGui.Enabled = s end)
+
+local function startUnbreakable()
+    local function hook(obj)
+        if not obj then return end
+        table.insert(UnbreakableConns, obj:GetAttributeChangedSignal("UnbreakableAll"):Connect(function()
+            if UnbreakableActive and obj:GetAttribute("UnbreakableAll") ~= true then obj:SetAttribute("UnbreakableAll", true) end
+        end))
+        if UnbreakableActive then obj:SetAttribute("UnbreakableAll", true) end
     end
-end)
-
-AddToggle(MainTab, "即死無効", function(state) workspace.FallenPartsDestroyHeight = state and 0/0 or -500 end)
-
-local function teleportToGhost()
-    local char = localPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then char.HumanoidRootPart.CFrame = CFrame.new(918, 252, 32928) end
+    table.insert(UnbreakableConns, localPlayer.CharacterAdded:Connect(hook))
+    table.insert(UnbreakableConns, workspace.ChildAdded:Connect(function(child) if child.Name == localPlayer.Name then hook(child) end end))
+    hook(localPlayer.Character); local f = workspace:FindFirstChild(localPlayer.Name) if f then hook(f) end
 end
-local function teleportToBean()
-    local char = localPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then char.HumanoidRootPart.CFrame = CFrame.new(-286, 306, 599) end
-end
-
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
-    if input.KeyCode == Enum.KeyCode.G then teleportToGhost()
-    elseif input.KeyCode == Enum.KeyCode.H then teleportToBean() end
-end)
-
-local T_Gui = Instance.new("ScreenGui"); T_Gui.Name = "TeleportGui"; T_Gui.ResetOnSpawn = false; T_Gui.Enabled = false; T_Gui.Parent = localPlayer.PlayerGui
-local function createTBtn(txt, pos, func)
-    local b = Instance.new("TextButton", T_Gui); b.Size = UDim2.new(0, 50, 0, 50); b.Position = pos; b.BackgroundColor3 = Color3.fromRGB(15, 15, 15); b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.TextSize = 20; b.Draggable = true
-    Instance.new("UICorner", b); b.MouseButton1Click:Connect(func)
-end
-createTBtn("👻", UDim2.new(0, 50, 0, 100), teleportToGhost)
-createTBtn("☕", UDim2.new(0, 50, 0, 170), teleportToBean)
-
-AddToggle(MainTab, "テレポートボタン表示", function(s) T_Gui.Enabled = s end)
-
--- --- CombatTab 機能 ---
-_G.FastAttackEnabled = false
-_G.AttackRange = 60
-
-local function IsAlive(char) return char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 end
-local function GetTargetsInRange(range)
-    local char = localPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return {} end
-    local targets = {}
-    local folders = {workspace:FindFirstChild("Enemies"), Players}
-    for _, f in ipairs(folders) do
-        if f then
-            local children = (f == Players) and f:GetPlayers() or f:GetChildren()
-            for _, obj in ipairs(children) do
-                local tChar = (f == Players) and obj.Character or obj
-                if tChar and tChar ~= char and IsAlive(tChar) then
-                    local hrp = tChar:FindFirstChild("HumanoidRootPart")
-                    if hrp and (hrp.Position - char.HumanoidRootPart.Position).Magnitude <= range then table.insert(targets, tChar) end
-                end
-            end
-        end
-    end
-    return targets
-end
-
-local function ExecuteAttack()
-    local tool = localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Tool")
-    if not tool then return end
-    local targets = GetTargetsInRange(_G.AttackRange)
-    if #targets == 0 then return end
-    if tool:FindFirstChild("LeftClickRemote") then
-        for i, t in ipairs(targets) do
-            local hrp = t:FindFirstChild("HumanoidRootPart")
-            if hrp then tool.LeftClickRemote:FireServer((hrp.Position - localPlayer.Character:GetPivot().Position).Unit, i) end
-        end
-    else
-        local hitList = {}
-        local lastPart
-        for _, t in ipairs(targets) do
-            if not t:GetAttribute("IsBoat") and t:FindFirstChild("Head") then table.insert(hitList, {t, t.Head}); lastPart = t.Head end
-        end
-        if lastPart then
-            local net = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Net")
-            pcall(function() net["RE/RegisterAttack"]:FireServer(0.4); net["RE/RegisterHit"]:FireServer(lastPart, hitList) end)
-        end
-    end
-end
-
-task.spawn(function() while true do if _G.FastAttackEnabled then pcall(ExecuteAttack) end task.wait(0.1) end end)
-
-AddToggle(CombatTab, "Fast Attack (自動攻撃)", function(s) _G.FastAttackEnabled = s end)
-AddToggle(CombatTab, "Super Range (射程 5万)", function(s) _G.AttackRange = s and 50000 or 60 end)
-
-_G.AutoRaceV4_Force = false
-_G.AutoRaceV3_Ability = false
-local AbilityCooldown = 0
-local RaceAbils = {"Last Resort", "Agility", "Water Body", "Heavenly Blood", "Heightened Senses", "Energy Core", "Primordial Reign"}
-
-RunService.Heartbeat:Connect(function(dt)
-    local char = localPlayer.Character
-    if not char then return end
-    pcall(function()
-        if _G.AutoRaceV4_Force then
-            local energy = char:FindFirstChild("RaceEnergy")
-            if energy and energy.Value >= 1 then
-                local rt = char:FindFirstChild("RaceTransformed")
-                if rt then rt.Value = false end
-                ReplicatedStorage.Remotes.CommE:FireServer("ActivateAbility")
-                local awk = localPlayer.Backpack:FindFirstChild("Awakening") or char:FindFirstChild("Awakening")
-                if awk and awk:FindFirstChild("RemoteFunction") then awk.RemoteFunction:InvokeServer(true) end
-            end
-        end
-        if _G.AutoRaceV3_Ability then
-            if IsAlive(char) then
-                local hasA = false
-                for _,v in ipairs(RaceAbils) do if localPlayer.Backpack:FindFirstChild(v) or char:FindFirstChild(v) then hasA = true break end end
-                if hasA then
-                    AbilityCooldown = AbilityCooldown - dt
-                    if AbilityCooldown <= 0 then ReplicatedStorage.Remotes.CommE:FireServer("ActivateAbility"); AbilityCooldown = 0.5 end
-                end
-            end
-        end
-    end)
-end)
-
-AddToggle(CombatTab, "Auto Race V4 (強制変身)", function(s) _G.AutoRaceV4_Force = s end)
-AddToggle(CombatTab, "Auto Race V3 (スキル連打)", function(s) _G.AutoRaceV3_Ability = s end)
-
--- [[ 6. 潜伏・視点自由化モード ]]
-local StealthActive = false
-local FreezePos, CamPart
-local HIDE_Y = -199996
-local S_Gui = Instance.new("ScreenGui"); S_Gui.Name = "StealthViewGui"; S_Gui.ResetOnSpawn = false; S_Gui.Enabled = false; S_Gui.Parent = localPlayer.PlayerGui
-local S_Btn = Instance.new("TextButton", S_Gui); S_Btn.Size = UDim2.new(0, 50, 0, 50); S_Btn.Position = UDim2.new(0.5, -25, 0.5, 50); S_Btn.BackgroundColor3 = Color3.fromRGB(15,15,15); S_Btn.Text = "OFF"; S_Btn.TextColor3 = Color3.new(1,1,1); S_Btn.Font = Enum.Font.GothamBold; S_Btn.TextSize = 14; S_Btn.Draggable = true
-
-S_Btn.MouseButton1Click:Connect(function()
-    local char = localPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    if not StealthActive then
-        StealthActive = true; FreezePos = char.HumanoidRootPart.CFrame; S_Btn.Text = "ON"; S_Btn.TextColor3 = Color3.fromRGB(255, 50, 50)
-        CamPart = Instance.new("Part", workspace); CamPart.Transparency = 1; CamPart.CanCollide = false; CamPart.Anchored = true; CamPart.CFrame = FreezePos
-        workspace.CurrentCamera.CameraSubject = CamPart
-        task.spawn(function()
-            while StealthActive and char:FindFirstChild("HumanoidRootPart") do
-                char.HumanoidRootPart.CFrame = CFrame.new(FreezePos.X, HIDE_Y, FreezePos.Z); char.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero; task.wait()
-            end
-        end)
-    else
-        StealthActive = false; S_Btn.Text = "OFF"; S_Btn.TextColor3 = Color3.new(1,1,1)
-        if CamPart then CamPart:Destroy() end
-        char.HumanoidRootPart.CFrame = FreezePos
-        if char:FindFirstChild("Humanoid") then workspace.CurrentCamera.CameraSubject = char.Humanoid end
-    end
-end)
-
-AddToggle(MainTab, "ステルスボタン表示", function(s) S_Gui.Enabled = s end)
-
-AddToggle(CombatTab, "Silent Aimbot (サイレントエイム)", function(s)
-    if s then EnableAimbot() else DisableAimbot() end
-end)
-
--- [[ 1. 状態管理用の変数を、GUIの上のほう（LocalPlayerの下など）に置く ]]
-local UnbreakableActive = false
-local UnbreakableConns = {}
-
--- [[ 2. トグル（ON/OFFスイッチ）の中に入れる処理 ]]
 AddToggle(MainTab, "Unbreakable All", function(state)
     UnbreakableActive = state
-    
-    -- OFFにした時は監視を止めてリセット
     for _, v in pairs(UnbreakableConns) do v:Disconnect() end
     UnbreakableConns = {}
-
-    if state then
-        -- ONにした時の処理
-        local function forceOn(obj)
-            if UnbreakableActive and obj:GetAttribute("UnbreakableAll") ~= true then
-                obj:SetAttribute("UnbreakableAll", true)
-            end
-        end
-
-        local function watch(obj)
-            if not obj then return end
-            forceOn(obj)
-            table.insert(UnbreakableConns, obj:GetAttributeChangedSignal("UnbreakableAll"):Connect(function()
-                forceOn(obj)
-            end))
-        end
-
-        -- 監視開始
-        table.insert(UnbreakableConns, localPlayer.CharacterAdded:Connect(watch))
-        table.insert(UnbreakableConns, workspace.ChildAdded:Connect(function(child)
-            if child.Name == localPlayer.Name then watch(child) end
-        end))
-
-        -- 現在のキャラとフォルダに即適用
-        if localPlayer.Character then watch(localPlayer.Character) end
-        local f = workspace:FindFirstChild(localPlayer.Name)
-        if f then watch(f) end
-    else
-        -- OFFにした時に属性を消す（必要なら）
-        if localPlayer.Character then localPlayer.Character:SetAttribute("UnbreakableAll", nil) end
-    end
+    if state then startUnbreakable() else if localPlayer.Character then localPlayer.Character:SetAttribute("UnbreakableAll", nil) end end
 end)
 
 -- [[ 7. GUI切り替えボタンの実装 ]]
 local ToggleButton = Instance.new("ImageButton")
 local Corner = Instance.new("UICorner")
-
--- ボタンの設定
 ToggleButton.Name = "YAJU_Toggle"
-ToggleButton.Parent = ScreenGui -- 元のコードのScreenGuiを使用
-ToggleButton.Size = UDim2.new(0, 50, 0, 50)
-ToggleButton.Position = UDim2.new(0.02, 0, 0.4, 0) -- 画面左側に配置
-ToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-ToggleButton.BorderSizePixel = 0
-ToggleButton.Active = true
-ToggleButton.Draggable = true -- ボタン自体をドラッグで移動可能に
-
--- ★ ここでアイコン（画像ID）を設定してください
--- 例: "rbxassetid://6031094678" など
+ToggleButton.Parent = ScreenGui
+ToggleButton.Size = UDim2.new(0, 45, 0, 45); ToggleButton.Position = UDim2.new(0.02, 0, 0.4, 0); ToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30); ToggleButton.BorderSizePixel = 0; ToggleButton.Active = true; ToggleButton.Draggable = true
 ToggleButton.Image = "rbxassetid://14963584666" 
+Corner.CornerRadius = UDim.new(0, 10); Corner.Parent = ToggleButton
 
-Corner.CornerRadius = UDim.new(0, 10)
-Corner.Parent = ToggleButton
-
--- 初期状態の設定
 local menuVisible = true
 MainFrame.Visible = menuVisible
-
--- クリックイベント
 ToggleButton.MouseButton1Click:Connect(function()
     menuVisible = not menuVisible
     MainFrame.Visible = menuVisible
-    
-    -- 演出：押したときに少しボタンを小さくする
-    ToggleButton:TweenSize(UDim2.new(0, 45, 0, 45), "Out", "Quad", 0.1, true)
-    task.wait(0.1)
-    ToggleButton:TweenSize(UDim2.new(0, 50, 0, 50), "Out", "Quad", 0.1, true)
-end)
-
--- ドラッグ中にメニューが開かないように調整（モバイル配慮）
-local dragStart, startPos
-ToggleButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragStart = input.Position
-        startPos = ToggleButton.Position
-    end
 end)
