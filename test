@@ -3,6 +3,9 @@ local localPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- [[ 1. 状態管理用の変数を、GUIの上のほう（LocalPlayerの下など）に置く ]]
+local UnbreakableActive = false
+local UnbreakableConns = {}
 
 -- [[ サイレントエイム用ロジック（追加分） ]]
 local AimState = { Target = nil, isHooked = false, Connection = nil }
@@ -1084,6 +1087,50 @@ AddToggle(MainTab, "ステルスボタン表示", function(s) S_Gui.Enabled = s 
 
 AddToggle(CombatTab, "Silent Aimbot (サイレントエイム)", function(s)
     if s then EnableAimbot() else DisableAimbot() end
+end)
+
+-- [[ 1. 状態管理用の変数を、GUIの上のほう（LocalPlayerの下など）に置く ]]
+local UnbreakableActive = false
+local UnbreakableConns = {}
+
+-- [[ 2. トグル（ON/OFFスイッチ）の中に入れる処理 ]]
+AddToggle(MainTab, "Unbreakable All", function(state)
+    UnbreakableActive = state
+    
+    -- OFFにした時は監視を止めてリセット
+    for _, v in pairs(UnbreakableConns) do v:Disconnect() end
+    UnbreakableConns = {}
+
+    if state then
+        -- ONにした時の処理
+        local function forceOn(obj)
+            if UnbreakableActive and obj:GetAttribute("UnbreakableAll") ~= true then
+                obj:SetAttribute("UnbreakableAll", true)
+            end
+        end
+
+        local function watch(obj)
+            if not obj then return end
+            forceOn(obj)
+            table.insert(UnbreakableConns, obj:GetAttributeChangedSignal("UnbreakableAll"):Connect(function()
+                forceOn(obj)
+            end))
+        end
+
+        -- 監視開始
+        table.insert(UnbreakableConns, localPlayer.CharacterAdded:Connect(watch))
+        table.insert(UnbreakableConns, workspace.ChildAdded:Connect(function(child)
+            if child.Name == localPlayer.Name then watch(child) end
+        end))
+
+        -- 現在のキャラとフォルダに即適用
+        if localPlayer.Character then watch(localPlayer.Character) end
+        local f = workspace:FindFirstChild(localPlayer.Name)
+        if f then watch(f) end
+    else
+        -- OFFにした時に属性を消す（必要なら）
+        if localPlayer.Character then localPlayer.Character:SetAttribute("UnbreakableAll", nil) end
+    end
 end)
 
 -- [[ 7. GUI切り替えボタンの実装 ]]
