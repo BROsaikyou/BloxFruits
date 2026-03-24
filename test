@@ -62,7 +62,7 @@ local function DisableAimbot()
     AimState.Target = nil; AimState.isHooked = false
 end
 -- [[ 1. 初期設定 & UI基盤 ]]
-local UI_SIZE = UDim2.new(0, 765, 0, 510) 
+local UI_SIZE = UDim2.new(0, 460, 0, 300) 
 local MAIN_BG = Color3.fromRGB(15, 15, 15)
 local ACCENT_COLOR = Color3.fromRGB(0, 140, 255)
 
@@ -109,11 +109,11 @@ Title.Text = "YAJU HUB"; Title.Font = Enum.Font.GothamBold; Title.TextSize = 28;
 Title.Position = UDim2.new(0, 25, 0, 25); Title.Size = UDim2.new(0, 300, 0, 40); Title.BackgroundTransparency = 1; Title.TextXAlignment = Enum.TextXAlignment.Left; Title.Parent = MainFrame
 
 local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 200, 1, -100); Sidebar.Position = UDim2.new(0, 10, 0, 85); Sidebar.BackgroundTransparency = 1; Sidebar.Parent = MainFrame
+Sidebar.Size = UDim2.new(0, 110, 1, -60); Sidebar.Position = UDim2.new(0, 10, 0, 85); Sidebar.BackgroundTransparency = 1; Sidebar.Parent = MainFrame
 Instance.new("UIListLayout", Sidebar).Padding = UDim.new(0, 10)
 
 local Container = Instance.new("Frame")
-Container.Size = UDim2.new(1, -230, 1, -110); Container.Position = UDim2.new(0, 215, 0, 95); Container.BackgroundColor3 = Color3.fromRGB(22, 22, 22); Container.Parent = MainFrame
+Container.Size = UDim2.new(1, -135, 1, -55); Container.Position = UDim2.new(0, 125, 0, 45); Container.BackgroundColor3 = Color3.fromRGB(22, 22, 22); Container.Parent = MainFrame
 Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 15)
 
 local tabPages, tabButtons = {}, {}
