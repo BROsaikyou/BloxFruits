@@ -58,7 +58,6 @@ local function DisableAimbot()
     if AimState.Connection then AimState.Connection:Disconnect() end
     AimState.Target = nil; AimState.isHooked = false
 end
-
 -- [[ 1. 初期設定 & UI基盤 ]]
 local UI_SIZE = UDim2.new(0, 765, 0, 510) 
 local MAIN_BG = Color3.fromRGB(15, 15, 15)
@@ -137,6 +136,18 @@ local function AddToggle(page, text, callback)
     end)
 end
 
+-- スクリプト実行ボタン用関数
+local function AddScriptButton(page, text, desc, callback)
+    local SFrame = Instance.new("TextButton")
+    SFrame.Size = UDim2.new(0.95, 0, 0, 60); SFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35); SFrame.Text = ""; SFrame.AutoButtonColor = true; SFrame.Parent = page
+    Instance.new("UICorner", SFrame).CornerRadius = UDim.new(0, 12)
+    local STitle = Instance.new("TextLabel")
+    STitle.Text = text; STitle.Font = Enum.Font.GothamBold; STitle.TextSize = 16; STitle.TextColor3 = ACCENT_COLOR; STitle.Position = UDim2.new(0, 15, 0, 10); STitle.Size = UDim2.new(0.9, 0, 0, 20); STitle.BackgroundTransparency = 1; STitle.TextXAlignment = Enum.TextXAlignment.Left; STitle.Parent = SFrame
+    local SDesc = Instance.new("TextLabel")
+    SDesc.Text = desc; SDesc.Font = Enum.Font.Gotham; SDesc.TextSize = 12; SDesc.TextColor3 = Color3.fromRGB(200, 200, 200); SDesc.Position = UDim2.new(0, 15, 0, 30); SDesc.Size = UDim2.new(0.9, 0, 0, 20); SDesc.BackgroundTransparency = 1; SDesc.TextXAlignment = Enum.TextXAlignment.Left; SDesc.Parent = SFrame
+    SFrame.MouseButton1Click:Connect(callback)
+end
+
 local function CreateTab(name, isFirst)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 45); btn.BackgroundColor3 = isFirst and ACCENT_COLOR or Color3.fromRGB(30, 30, 30)
@@ -157,99 +168,674 @@ end
 local MainTab = CreateTab("Main", true)
 local CombatTab = CreateTab("Combat", false)
 local HaritsukiTab = CreateTab("張り付き", false)
+local ScriptTab = CreateTab("Scripts", false)
+-- [[ 4. カテゴリ設定 (追記・修正部分) ]]
+local ESPTab = CreateTab("ESP", false) -- ESPタブを新規作成
+-- [[ Playerカテゴリの作成 ]]
+local PlayerTab = CreateTab("Player", false)
 
--- --- CombatTab 機能 ---
-AddToggle(CombatTab, "Fast Attack (自動攻撃)", function(s) _G.FastAttackEnabled = s end)
-AddToggle(CombatTab, "Super Range (射程 5万)", function(s) _G.AttackRange = s and 50000 or 60 end)
-AddToggle(CombatTab, "Auto Race V4 (強制変身)", function(s) _G.AutoRaceV4_Force = s end)
-AddToggle(CombatTab, "Auto Race V3 (スキル連打)", function(s) _G.AutoRaceV3_Ability = s end)
-AddToggle(CombatTab, "Silent Aimbot (サイレントエイム)", function(s)
-    if s then EnableAimbot() else DisableAimbot() end
+-- --- Change Team (強化版チーム切替) ---
+AddScriptButton(PlayerTab, "Change Team (チーム切替)", "海賊と海軍を交互に切り替えます", function()
+    local player = game:GetService("Players").LocalPlayer
+    local rs = game:GetService("ReplicatedStorage")
+    
+    -- リモートイベントの取得を強化
+    local remotes = rs:FindFirstChild("Remotes")
+    local commF = remotes and remotes:FindFirstChild("CommF_")
+    
+    if commF then
+        pcall(function()
+            -- 現在のチーム判定（Teamオブジェクトがない場合も考慮）
+            local myTeam = player.Team and player.Team.Name or ""
+            
+            if not string.find(myTeam, "Pirates") then
+                -- 海賊でないなら海賊へ
+                commF:InvokeServer("SetTeam", "Pirates")
+            else
+                -- 海賊なら海軍へ
+                commF:InvokeServer("SetTeam", "Marines")
+            end
+        end)
+    else
+        -- 見つからない場合の予備手段（直接パス指定）
+        pcall(function()
+            rs.Remotes.CommF_:InvokeServer("SetTeam", "Pirates")
+        end)
+    end
+end)
+-- 状態管理変数
+local WS_Enabled = false
+local WS_Value = 16
+local JP_Enabled = false
+local JP_Value = 50
+local noclipEnabled = false
+
+-- --- 1. スイッチと入力がセットになった統合パーツ ---
+local function AddPlayerSetting(page, text, defaultVal, onUpdate)
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(0.95, 0, 0, 60); Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30); Frame.Parent = page
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 12)
+
+    local Label = Instance.new("TextLabel")
+    Label.Text = text; Label.Font = Enum.Font.GothamSemibold; Label.TextSize = 16
+    Label.TextColor3 = Color3.new(1,1,1); Label.BackgroundTransparency = 1
+    Label.Position = UDim2.new(0, 15, 0, 0); Label.Size = UDim2.new(0.4, 0, 1, 0)
+    Label.TextXAlignment = Enum.TextXAlignment.Left; Label.Parent = Frame
+
+    local Input = Instance.new("TextBox")
+    Input.Size = UDim2.new(0, 70, 0, 30); Input.Position = UDim2.new(1, -140, 0.5, -15)
+    Input.BackgroundColor3 = Color3.fromRGB(45, 45, 45); Input.Text = tostring(defaultVal)
+    Input.TextColor3 = Color3.new(1, 1, 1); Input.Font = Enum.Font.Gotham; Input.TextSize = 14; Input.Parent = Frame
+    Instance.new("UICorner", Input).CornerRadius = UDim.new(0, 6)
+
+    local Switch = Instance.new("TextButton")
+    Switch.Size = UDim2.new(0, 44, 0, 22); Switch.Position = UDim2.new(1, -60, 0.5, -11)
+    Switch.BackgroundColor3 = Color3.fromRGB(60, 60, 60); Switch.Text = ""; Switch.Parent = Frame
+    Instance.new("UICorner", Switch).CornerRadius = UDim.new(1, 0)
+    
+    local Knob = Instance.new("Frame")
+    Knob.Size = UDim2.new(0, 16, 0, 16); Knob.Position = UDim2.new(0, 3, 0.5, -8)
+    Knob.BackgroundColor3 = Color3.new(1,1,1); Knob.Parent = Switch
+    Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
+
+    local isEnabled = false
+    local currentNum = defaultVal
+
+    Switch.MouseButton1Click:Connect(function()
+        isEnabled = not isEnabled
+        Switch.BackgroundColor3 = isEnabled and ACCENT_COLOR or Color3.fromRGB(60, 60, 60)
+        Knob.Position = isEnabled and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8)
+        onUpdate(isEnabled, currentNum)
+    end)
+
+    Input.FocusLost:Connect(function()
+        currentNum = tonumber(Input.Text) or defaultVal
+        if isEnabled then onUpdate(true, currentNum) end
+    end)
+end
+
+-- --- 2. UI要素の配置 ---
+AddToggle(PlayerTab, "Noclip (壁抜け)", function(state)
+    noclipEnabled = state
+    if not state and localPlayer.Character then
+        for _, part in pairs(localPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = true end
+        end
+    end
 end)
 
--- --- Combat 実行ループ ---
-_G.FastAttackEnabled = false
-_G.AttackRange = 60
+AddPlayerSetting(PlayerTab, "WalkSpeed (速度)", 16, function(en, val)
+    WS_Enabled = en
+    WS_Value = val
+    -- OFF時に標準速度へリセット
+    if not en and localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
+        localPlayer.Character.Humanoid.WalkSpeed = 16
+    end
+end)
 
-local function IsAlive(char) return char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 end
-local function GetTargetsInRange(range)
+AddPlayerSetting(PlayerTab, "JumpPower (ジャンプ)", 50, function(en, val)
+    JP_Enabled = en
+    JP_Value = val
+    -- OFF時に標準ジャンプ力へリセット
+    if not en and localPlayer.Character and localPlayer.Character:FindFirstChild("Humanoid") then
+        local hum = localPlayer.Character.Humanoid
+        hum.JumpPower = 50
+        -- 一部のゲームではJumpHeightを使っている場合があるため両方リセット
+        if hum:FindFirstChild("JumpHeight") then hum.JumpHeight = 7.2 end 
+    end
+end)
+
+-- --- 3. 実行メインロジック ---
+RunService.Stepped:Connect(function()
     local char = localPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return {} end
-    local targets = {}
-    local folders = {workspace:FindFirstChild("Enemies"), Players}
-    for _, f in ipairs(folders) do
-        if f then
-            local children = (f == Players) and f:GetPlayers() or f:GetChildren()
-            for _, obj in ipairs(children) do
-                local tChar = (f == Players) and obj.Character or obj
-                if tChar and tChar ~= char and IsAlive(tChar) then
-                    local hrp = tChar:FindFirstChild("HumanoidRootPart")
-                    if hrp and (hrp.Position - char.HumanoidRootPart.Position).Magnitude <= range then table.insert(targets, tChar) end
-                end
+    local hum = char and char:FindFirstChild("Humanoid")
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    
+    if char and hrp and hum then
+        -- Noclip
+        if noclipEnabled then
+            for _, v in pairs(char:GetDescendants()) do
+                if v:IsA("BasePart") then v.CanCollide = false end
             end
+        end
+        
+        -- WalkSpeed (自然な移動速度変更)
+        if WS_Enabled then
+            local moveDir = hum.MoveDirection
+            if moveDir.Magnitude > 0 then
+                hrp.Velocity = Vector3.new(moveDir.X * WS_Value, hrp.Velocity.Y, moveDir.Z * WS_Value)
+            end
+        end
+        
+        -- JumpPower (ONの時だけ上書き)
+        if JP_Enabled then
+            hum.UseJumpPower = true
+            hum.JumpPower = JP_Value
         end
     end
-    return targets
-end
+end)
+-- --- ESP設定とロジックの統合 ---
+local ESP_Settings = {
+    Box = false,
+    Tracer = false,
+    Name = false,
+    Health = false,
+    Distance = false
+}
 
-local function ExecuteAttack()
-    local tool = localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Tool")
-    if not tool then return end
-    local targets = GetTargetsInRange(_G.AttackRange)
-    if #targets == 0 then return end
-    if tool:FindFirstChild("LeftClickRemote") then
-        for i, t in ipairs(targets) do
-            local hrp = t:FindFirstChild("HumanoidRootPart")
-            if hrp then tool.LeftClickRemote:FireServer((hrp.Position - localPlayer.Character:GetPivot().Position).Unit, i) end
-        end
-    else
-        local hitList = {}
-        local lastPart
-        for _, t in ipairs(targets) do
-            if not t:GetAttribute("IsBoat") and t:FindFirstChild("Head") then table.insert(hitList, {t, t.Head}); lastPart = t.Head end
-        end
-        if lastPart then
-            local net = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Net")
-            pcall(function() net["RE/RegisterAttack"]:FireServer(0.4); net["RE/RegisterHit"]:FireServer(lastPart, hitList) end)
-        end
+-- ESPタブにトグルを追加
+AddToggle(ESPTab, "Box (ボックス表示)", function(s) ESP_Settings.Box = s end)
+AddToggle(ESPTab, "Tracer (トラッカー表示)", function(s) ESP_Settings.Tracer = s end)
+AddToggle(ESPTab, "Name (名前表示)", function(s) ESP_Settings.Name = s end)
+AddToggle(ESPTab, "Health (体力表示)", function(s) ESP_Settings.Health = s end)
+AddToggle(ESPTab, "Distance (距離表示)", function(s) ESP_Settings.Distance = s end)
+
+-- ESPメインロジック (提供されたコードを最適化して組み込み)
+local function createESP(player)
+    if player == localPlayer then return end
+
+    local Box = Drawing.new("Square")
+    local Tracer = Drawing.new("Line")
+    local NameL = Drawing.new("Text")
+    local HealthL = Drawing.new("Text")
+    local DistL = Drawing.new("Text")
+
+    -- テキスト設定
+    for _, txt in pairs({NameL, HealthL, DistL}) do
+        txt.Size = (txt == NameL) and 24 or 20
+        txt.Center = true
+        txt.Outline = true
+        txt.Visible = false
     end
-end
 
-task.spawn(function() while true do if _G.FastAttackEnabled then pcall(ExecuteAttack) end task.wait(0.1) end end)
+    local function hideAll()
+        Box.Visible = false; Tracer.Visible = false; NameL.Visible = false; HealthL.Visible = false; DistL.Visible = false
+    end
 
-_G.AutoRaceV4_Force = false
-_G.AutoRaceV3_Ability = false
-local AbilityCooldown = 0
-local RaceAbils = {"Last Resort", "Agility", "Water Body", "Heavenly Blood", "Heightened Senses", "Energy Core", "Primordial Reign"}
-
-RunService.Heartbeat:Connect(function(dt)
-    local char = localPlayer.Character
-    if not char then return end
-    pcall(function()
-        if _G.AutoRaceV4_Force then
-            local energy = char:FindFirstChild("RaceEnergy")
-            if energy and energy.Value >= 1 then
-                local rt = char:FindFirstChild("RaceTransformed")
-                if rt then rt.Value = false end
-                ReplicatedStorage.Remotes.CommE:FireServer("ActivateAbility")
-                local awk = localPlayer.Backpack:FindFirstChild("Awakening") or char:FindFirstChild("Awakening")
-                if awk and awk:FindFirstChild("RemoteFunction") then awk.RemoteFunction:InvokeServer(true) end
-            end
+    local connection
+    connection = RunService.RenderStepped:Connect(function()
+        if not player or not player.Parent then
+            hideAll()
+            Box:Remove(); Tracer:Remove(); NameL:Remove(); HealthL:Remove(); DistL:Remove()
+            connection:Disconnect()
+            return
         end
-        if _G.AutoRaceV3_Ability then
-            if IsAlive(char) then
-                local hasA = false
-                for _,v in ipairs(RaceAbils) do if localPlayer.Backpack:FindFirstChild(v) or char:FindFirstChild(v) then hasA = true break end end
-                if hasA then
-                    AbilityCooldown = AbilityCooldown - dt
-                    if AbilityCooldown <= 0 then ReplicatedStorage.Remotes.CommE:FireServer("ActivateAbility"); AbilityCooldown = 0.5 end
-                end
+
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChild("Humanoid")
+        
+        if hrp and hum and hum.Health > 0 then
+            local pos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position)
+
+            if onScreen then
+                local teamColor = Color3.new(1, 1, 1)
+                local teamName = (player.Team and player.Team.Name) or (player:FindFirstChild("Data") and player.Data:FindFirstChild("Team") and player.Data.Team.Value) or ""
+                if string.find(teamName, "Pirate") then teamColor = Color3.fromRGB(255, 0, 0)
+                elseif string.find(teamName, "Marine") then teamColor = Color3.fromRGB(0, 190, 255) end
+
+                local head_pos = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 3, 0))
+                local leg_pos = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3.5, 0))
+                local height = math.abs(head_pos.Y - leg_pos.Y)
+                local width = height * 0.55
+
+                -- 各種描画の更新 (ESP_Settingsを参照)
+                Box.Visible = ESP_Settings.Box
+                Box.Size = Vector2.new(width, height)
+                Box.Position = Vector2.new(pos.X - width / 2, pos.Y - height / 2)
+                Box.Color = teamColor
+                Box.Thickness = 1
+
+                Tracer.Visible = ESP_Settings.Tracer
+                Tracer.From = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y)
+                Tracer.To = Vector2.new(pos.X, pos.Y + (height / 2))
+                Tracer.Color = teamColor
+
+                NameL.Visible = ESP_Settings.Name
+                NameL.Text = player.DisplayName or player.Name
+                NameL.Position = Vector2.new(pos.X, pos.Y - (height / 2) - 30)
+                NameL.Color = teamColor
+
+                HealthL.Visible = ESP_Settings.Health
+                HealthL.Text = "HP: " .. math.floor(hum.Health)
+                HealthL.Position = Vector2.new(pos.X, pos.Y - (height / 2) - 55)
+                HealthL.Color = Color3.fromRGB(0, 255, 0)
+
+                DistL.Visible = ESP_Settings.Distance
+                local d = math.floor((workspace.CurrentCamera.CFrame.Position - hrp.Position).Magnitude)
+                DistL.Text = d .. "m"
+                DistL.Position = Vector2.new(pos.X, pos.Y + (height / 2) + 10)
+                DistL.Color = Color3.new(1, 1, 1)
+            else
+                hideAll()
             end
+        else
+            hideAll()
         end
     end)
+end
+
+for _, v in pairs(Players:GetPlayers()) do createESP(v) end
+Players.PlayerAdded:Connect(createESP)
+
+-- [[ 5. 実行ループ ... 以下、元のスクリプトへ続く ]]
+-- Scriptsタブ 実行ボタン
+AddScriptButton(ScriptTab, "FLY GUI", "飛行スクリプトを実行", function()
+    local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- GUI作成
+local main = Instance.new("ScreenGui")
+main.Name = "main"
+main.Parent = LocalPlayer:WaitForChild("PlayerGui")
+main.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+main.ResetOnSpawn = false
+
+local Frame = Instance.new("Frame", main)
+Frame.Size = UDim2.new(0, 190, 0, 57)
+Frame.Position = UDim2.new(0.1, 0, 0.38, 0)
+Frame.Active = true
+Frame.Draggable = true
+Frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+Frame.BackgroundTransparency = 0.1
+
+local function addUICorner(obj, radius)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0,radius)
+	corner.Parent = obj
+end
+addUICorner(Frame, 10)
+
+-- ボタン・ラベル作成関数
+local function createButton(name, parent, size, pos, text, bgColor, textColor, textSize)
+	local btn = Instance.new("TextButton")
+	btn.Name = name
+	btn.Parent = parent
+	btn.Size = size
+	btn.Position = pos
+	btn.Text = text
+	btn.Font = Enum.Font.RobotoMono
+	btn.TextColor3 = textColor
+	btn.TextSize = textSize
+	btn.BackgroundColor3 = bgColor
+	btn.BackgroundTransparency = 0.1
+	addUICorner(btn, 8)
+	return btn
+end
+
+local up = createButton("up", Frame, UDim2.new(0,44,0,28), UDim2.new(0,0,0,0), "UP", Color3.fromRGB(0,0,0), Color3.fromRGB(255,255,255), 14)
+local down = createButton("down", Frame, UDim2.new(0,44,0,28), UDim2.new(0,0,0.49,0), "DOWN", Color3.fromRGB(50,50,50), Color3.fromRGB(255,255,255), 14)
+local onof = createButton("onof", Frame, UDim2.new(0,56,0,28), UDim2.new(0.7,0,0.49,0), "fly", Color3.fromRGB(0,0,0), Color3.fromRGB(255,255,255), 14)
+local plus = createButton("plus", Frame, UDim2.new(0,45,0,28), UDim2.new(0.23,0,0,0), "+", Color3.fromRGB(50,50,50), Color3.fromRGB(255,255,255), 14)
+local mine = createButton("mine", Frame, UDim2.new(0,45,0,29), UDim2.new(0.23,0,0.49,0), "-", Color3.fromRGB(50,50,50), Color3.fromRGB(255,255,255), 14)
+local closebutton = createButton("Close", Frame, UDim2.new(0,45,0,28), UDim2.new(0,0,-1,27), "X", Color3.fromRGB(200,0,0), Color3.fromRGB(255,255,255), 30)
+local mini = createButton("minimize", Frame, UDim2.new(0,45,0,28), UDim2.new(0,44,-1,27), "-", Color3.fromRGB(0,0,0), Color3.fromRGB(255,255,255), 40)
+local mini2 = createButton("minimize2", Frame, UDim2.new(0,45,0,28), UDim2.new(0,44,-1,57), "+", Color3.fromRGB(50,50,50), Color3.fromRGB(255,255,255), 40)
+mini2.Visible = false
+
+local TextLabel = Instance.new("TextLabel", Frame)
+TextLabel.Size = UDim2.new(0,100,0,28)
+TextLabel.Position = UDim2.new(0.47,0,0,0)
+TextLabel.Text = "iruka hub fly"
+TextLabel.Font = Enum.Font.RobotoMono
+TextLabel.TextColor3 = Color3.fromRGB(255,255,255)
+TextLabel.TextScaled = true
+TextLabel.TextWrapped = true
+TextLabel.BackgroundColor3 = Color3.fromRGB(20,20,20)
+TextLabel.BackgroundTransparency = 0.1
+addUICorner(TextLabel, 8)
+
+local speed = Instance.new("TextLabel", Frame)
+speed.Size = UDim2.new(0,44,0,28)
+speed.Position = UDim2.new(0.47,0,0.49,0)
+speed.Text = "1"
+speed.Font = Enum.Font.RobotoMono
+speed.TextColor3 = Color3.fromRGB(255,255,255)
+speed.TextScaled = true
+speed.TextWrapped = true
+speed.BackgroundColor3 = Color3.fromRGB(20,20,20)
+speed.BackgroundTransparency = 0.1
+addUICorner(speed, 8)
+
+-- 変数
+local speeds = 1
+local nowe = false
+local speaker = LocalPlayer
+
+onof.MouseButton1Down:connect(function()
+
+	if nowe == true then
+		nowe = false
+
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing,true)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown,true)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Flying,true)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall,true)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp,true)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping,true)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Landed,true)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics,true)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding,true)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll,true)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Running,true)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.RunningNoPhysics,true)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated,true)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.StrafingNoPhysics,true)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming,true)
+		speaker.Character.Humanoid:ChangeState(Enum.HumanoidStateType.RunningNoPhysics)
+	else 
+		nowe = true
+
+
+
+		for i = 1, speeds do
+			spawn(function()
+
+				local hb = game:GetService("RunService").Heartbeat	
+
+
+				tpwalking = true
+				local chr = game.Players.LocalPlayer.Character
+				local hum = chr and chr:FindFirstChildWhichIsA("Humanoid")
+				while tpwalking and hb:Wait() and chr and hum and hum.Parent do
+					if hum.MoveDirection.Magnitude > 0 then
+						chr:TranslateBy(hum.MoveDirection)
+					end
+				end
+
+			end)
+		end
+		game.Players.LocalPlayer.Character.Animate.Disabled = true
+		local Char = game.Players.LocalPlayer.Character
+		local Hum = Char:FindFirstChildOfClass("Humanoid") or Char:FindFirstChildOfClass("AnimationController")
+
+		for i,v in next, Hum:GetPlayingAnimationTracks() do
+			v:AdjustSpeed(0)
+		end
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing,false)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown,false)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Flying,false)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Freefall,false)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.GettingUp,false)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping,false)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Landed,false)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics,false)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding,false)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll,false)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Running,false)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.RunningNoPhysics,false)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated,false)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.StrafingNoPhysics,false)
+		speaker.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming,false)
+		speaker.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Swimming)
+	end
+
+
+
+
+	if game:GetService("Players").LocalPlayer.Character:FindFirstChildOfClass("Humanoid").RigType == Enum.HumanoidRigType.R6 then
+
+
+
+		local plr = game.Players.LocalPlayer
+		local torso = plr.Character.Torso
+		local flying = true
+		local deb = true
+		local ctrl = {f = 0, b = 0, l = 0, r = 0}
+		local lastctrl = {f = 0, b = 0, l = 0, r = 0}
+		local maxspeed = 50
+		local speed = 0
+
+
+		local bg = Instance.new("BodyGyro", torso)
+		bg.P = 9e4
+		bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+		bg.cframe = torso.CFrame
+		local bv = Instance.new("BodyVelocity", torso)
+		bv.velocity = Vector3.new(0,0.1,0)
+		bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
+		if nowe == true then
+			plr.Character.Humanoid.PlatformStand = true
+		end
+		while nowe == true or game:GetService("Players").LocalPlayer.Character.Humanoid.Health == 0 do
+			game:GetService("RunService").RenderStepped:Wait()
+
+			if ctrl.l + ctrl.r ~= 0 or ctrl.f + ctrl.b ~= 0 then
+				speed = speed+.5+(speed/maxspeed)
+				if speed > maxspeed then
+					speed = maxspeed
+				end
+			elseif not (ctrl.l + ctrl.r ~= 0 or ctrl.f + ctrl.b ~= 0) and speed ~= 0 then
+				speed = speed-1
+				if speed < 0 then
+					speed = 0
+				end
+			end
+			if (ctrl.l + ctrl.r) ~= 0 or (ctrl.f + ctrl.b) ~= 0 then
+				bv.velocity = ((game.Workspace.CurrentCamera.CoordinateFrame.lookVector * (ctrl.f+ctrl.b)) + ((game.Workspace.CurrentCamera.CoordinateFrame * CFrame.new(ctrl.l+ctrl.r,(ctrl.f+ctrl.b)*.2,0).p) - game.Workspace.CurrentCamera.CoordinateFrame.p))*speed
+				lastctrl = {f = ctrl.f, b = ctrl.b, l = ctrl.l, r = ctrl.r}
+			elseif (ctrl.l + ctrl.r) == 0 and (ctrl.f + ctrl.b) == 0 and speed ~= 0 then
+				bv.velocity = ((game.Workspace.CurrentCamera.CoordinateFrame.lookVector * (lastctrl.f+lastctrl.b)) + ((game.Workspace.CurrentCamera.CoordinateFrame * CFrame.new(lastctrl.l+lastctrl.r,(lastctrl.f+lastctrl.b)*.2,0).p) - game.Workspace.CurrentCamera.CoordinateFrame.p))*speed
+			else
+				bv.velocity = Vector3.new(0,0,0)
+			end
+			--	game.Players.LocalPlayer.Character.Animate.Disabled = true
+			bg.cframe = game.Workspace.CurrentCamera.CoordinateFrame * CFrame.Angles(-math.rad((ctrl.f+ctrl.b)*50*speed/maxspeed),0,0)
+		end
+		ctrl = {f = 0, b = 0, l = 0, r = 0}
+		lastctrl = {f = 0, b = 0, l = 0, r = 0}
+		speed = 0
+		bg:Destroy()
+		bv:Destroy()
+		plr.Character.Humanoid.PlatformStand = false
+		game.Players.LocalPlayer.Character.Animate.Disabled = false
+		tpwalking = false
+
+
+
+
+	else
+		local plr = game.Players.LocalPlayer
+		local UpperTorso = plr.Character.UpperTorso
+		local flying = true
+		local deb = true
+		local ctrl = {f = 0, b = 0, l = 0, r = 0}
+		local lastctrl = {f = 0, b = 0, l = 0, r = 0}
+		local maxspeed = 50
+		local speed = 0
+
+
+		local bg = Instance.new("BodyGyro", UpperTorso)
+		bg.P = 9e4
+		bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+		bg.cframe = UpperTorso.CFrame
+		local bv = Instance.new("BodyVelocity", UpperTorso)
+		bv.velocity = Vector3.new(0,0.1,0)
+		bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
+		if nowe == true then
+			plr.Character.Humanoid.PlatformStand = true
+		end
+		while nowe == true or game:GetService("Players").LocalPlayer.Character.Humanoid.Health == 0 do
+			wait()
+
+			if ctrl.l + ctrl.r ~= 0 or ctrl.f + ctrl.b ~= 0 then
+				speed = speed+.5+(speed/maxspeed)
+				if speed > maxspeed then
+					speed = maxspeed
+				end
+			elseif not (ctrl.l + ctrl.r ~= 0 or ctrl.f + ctrl.b ~= 0) and speed ~= 0 then
+				speed = speed-1
+				if speed < 0 then
+					speed = 0
+				end
+			end
+			if (ctrl.l + ctrl.r) ~= 0 or (ctrl.f + ctrl.b) ~= 0 then
+				bv.velocity = ((game.Workspace.CurrentCamera.CoordinateFrame.lookVector * (ctrl.f+ctrl.b)) + ((game.Workspace.CurrentCamera.CoordinateFrame * CFrame.new(ctrl.l+ctrl.r,(ctrl.f+ctrl.b)*.2,0).p) - game.Workspace.CurrentCamera.CoordinateFrame.p))*speed
+				lastctrl = {f = ctrl.f, b = ctrl.b, l = ctrl.l, r = ctrl.r}
+			elseif (ctrl.l + ctrl.r) == 0 and (ctrl.f + ctrl.b) == 0 and speed ~= 0 then
+				bv.velocity = ((game.Workspace.CurrentCamera.CoordinateFrame.lookVector * (lastctrl.f+lastctrl.b)) + ((game.Workspace.CurrentCamera.CoordinateFrame * CFrame.new(lastctrl.l+lastctrl.r,(lastctrl.f+lastctrl.b)*.2,0).p) - game.Workspace.CurrentCamera.CoordinateFrame.p))*speed
+			else
+				bv.velocity = Vector3.new(0,0,0)
+			end
+
+			bg.cframe = game.Workspace.CurrentCamera.CoordinateFrame * CFrame.Angles(-math.rad((ctrl.f+ctrl.b)*50*speed/maxspeed),0,0)
+		end
+		ctrl = {f = 0, b = 0, l = 0, r = 0}
+		lastctrl = {f = 0, b = 0, l = 0, r = 0}
+		speed = 0
+		bg:Destroy()
+		bv:Destroy()
+		plr.Character.Humanoid.PlatformStand = false
+		game.Players.LocalPlayer.Character.Animate.Disabled = false
+		tpwalking = false
+
+
+
+	end
+
+
+
+
+
 end)
 
--- --- HaritsukiTab 機能 ---
+local tis
+
+up.MouseButton1Down:connect(function()
+	tis = up.MouseEnter:connect(function()
+		while tis do
+			wait()
+			game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0,1,0)
+		end
+	end)
+end)
+
+up.MouseLeave:connect(function()
+	if tis then
+		tis:Disconnect()
+		tis = nil
+	end
+end)
+
+local dis
+
+down.MouseButton1Down:connect(function()
+	dis = down.MouseEnter:connect(function()
+		while dis do
+			wait()
+			game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0,-1,0)
+		end
+	end)
+end)
+
+down.MouseLeave:connect(function()
+	if dis then
+		dis:Disconnect()
+		dis = nil
+	end
+end)
+
+
+game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function(char)
+	wait(0.7)
+	game.Players.LocalPlayer.Character.Humanoid.PlatformStand = false
+	game.Players.LocalPlayer.Character.Animate.Disabled = false
+
+end)
+
+
+plus.MouseButton1Down:connect(function()
+	speeds = speeds + 1
+	speed.Text = speeds
+	if nowe == true then
+
+
+		tpwalking = false
+		for i = 1, speeds do
+			spawn(function()
+
+				local hb = game:GetService("RunService").Heartbeat	
+
+
+				tpwalking = true
+				local chr = game.Players.LocalPlayer.Character
+				local hum = chr and chr:FindFirstChildWhichIsA("Humanoid")
+				while tpwalking and hb:Wait() and chr and hum and hum.Parent do
+					if hum.MoveDirection.Magnitude > 0 then
+						chr:TranslateBy(hum.MoveDirection)
+					end
+				end
+
+			end)
+		end
+	end
+end)
+mine.MouseButton1Down:connect(function()
+	if speeds == 1 then
+		speed.Text = 'cannot be less than 1'
+		wait(1)
+		speed.Text = speeds
+	else
+		speeds = speeds - 1
+		speed.Text = speeds
+		if nowe == true then
+			tpwalking = false
+			for i = 1, speeds do
+				spawn(function()
+
+					local hb = game:GetService("RunService").Heartbeat	
+
+
+					tpwalking = true
+					local chr = game.Players.LocalPlayer.Character
+					local hum = chr and chr:FindFirstChildWhichIsA("Humanoid")
+					while tpwalking and hb:Wait() and chr and hum and hum.Parent do
+						if hum.MoveDirection.Magnitude > 0 then
+							chr:TranslateBy(hum.MoveDirection)
+						end
+					end
+
+				end)
+			end
+		end
+	end
+end)
+
+closebutton.MouseButton1Click:Connect(function()
+	main:Destroy()
+end)
+
+mini.MouseButton1Click:Connect(function()
+	up.Visible = false
+	down.Visible = false
+	onof.Visible = false
+	plus.Visible = false
+	speed.Visible = false
+	mine.Visible = false
+	mini.Visible = false
+	mini2.Visible = true
+	main.Frame.BackgroundTransparency = 1
+	closebutton.Position =  UDim2.new(0, 0, -1, 57)
+end)
+
+mini2.MouseButton1Click:Connect(function()
+	up.Visible = true
+	down.Visible = true
+	onof.Visible = true
+	plus.Visible = true
+	speed.Visible = true
+	mine.Visible = true
+	mini.Visible = true
+	mini2.Visible = false
+	main.Frame.BackgroundTransparency = 0 
+	closebutton.Position =  UDim2.new(0, 0, -1, 27)
+end)
+
+end)
+
+
+-- --- 張り付き機能 ---
 local H_TargetName, H_Mode, H_Active, H_Speed, H_BtnLocked = "", "TP", false, 300, false
 
 local ResetBtn = Instance.new("TextButton")
@@ -316,6 +902,7 @@ H_Main.MouseButton1Up:Connect(function()
 end)
 AddToggle(HaritsukiTab, "操作GUI表示", function(s) H_Gui.Enabled = s end)
 
+-- [[ 5. 実行ループ ]]
 RunService.Heartbeat:Connect(function(dt)
     if H_Active and H_TargetName ~= "" then
         pcall(function()
@@ -378,6 +965,94 @@ createTBtn("☕", UDim2.new(0, 50, 0, 170), teleportToBean)
 
 AddToggle(MainTab, "テレポートボタン表示", function(s) T_Gui.Enabled = s end)
 
+-- --- CombatTab 機能 ---
+_G.FastAttackEnabled = false
+_G.AttackRange = 60
+
+local function IsAlive(char) return char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 end
+local function GetTargetsInRange(range)
+    local char = localPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return {} end
+    local targets = {}
+    local folders = {workspace:FindFirstChild("Enemies"), Players}
+    for _, f in ipairs(folders) do
+        if f then
+            local children = (f == Players) and f:GetPlayers() or f:GetChildren()
+            for _, obj in ipairs(children) do
+                local tChar = (f == Players) and obj.Character or obj
+                if tChar and tChar ~= char and IsAlive(tChar) then
+                    local hrp = tChar:FindFirstChild("HumanoidRootPart")
+                    if hrp and (hrp.Position - char.HumanoidRootPart.Position).Magnitude <= range then table.insert(targets, tChar) end
+                end
+            end
+        end
+    end
+    return targets
+end
+
+local function ExecuteAttack()
+    local tool = localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Tool")
+    if not tool then return end
+    local targets = GetTargetsInRange(_G.AttackRange)
+    if #targets == 0 then return end
+    if tool:FindFirstChild("LeftClickRemote") then
+        for i, t in ipairs(targets) do
+            local hrp = t:FindFirstChild("HumanoidRootPart")
+            if hrp then tool.LeftClickRemote:FireServer((hrp.Position - localPlayer.Character:GetPivot().Position).Unit, i) end
+        end
+    else
+        local hitList = {}
+        local lastPart
+        for _, t in ipairs(targets) do
+            if not t:GetAttribute("IsBoat") and t:FindFirstChild("Head") then table.insert(hitList, {t, t.Head}); lastPart = t.Head end
+        end
+        if lastPart then
+            local net = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Net")
+            pcall(function() net["RE/RegisterAttack"]:FireServer(0.4); net["RE/RegisterHit"]:FireServer(lastPart, hitList) end)
+        end
+    end
+end
+
+task.spawn(function() while true do if _G.FastAttackEnabled then pcall(ExecuteAttack) end task.wait(0.1) end end)
+
+AddToggle(CombatTab, "Fast Attack (自動攻撃)", function(s) _G.FastAttackEnabled = s end)
+AddToggle(CombatTab, "Super Range (射程 5万)", function(s) _G.AttackRange = s and 50000 or 60 end)
+
+_G.AutoRaceV4_Force = false
+_G.AutoRaceV3_Ability = false
+local AbilityCooldown = 0
+local RaceAbils = {"Last Resort", "Agility", "Water Body", "Heavenly Blood", "Heightened Senses", "Energy Core", "Primordial Reign"}
+
+RunService.Heartbeat:Connect(function(dt)
+    local char = localPlayer.Character
+    if not char then return end
+    pcall(function()
+        if _G.AutoRaceV4_Force then
+            local energy = char:FindFirstChild("RaceEnergy")
+            if energy and energy.Value >= 1 then
+                local rt = char:FindFirstChild("RaceTransformed")
+                if rt then rt.Value = false end
+                ReplicatedStorage.Remotes.CommE:FireServer("ActivateAbility")
+                local awk = localPlayer.Backpack:FindFirstChild("Awakening") or char:FindFirstChild("Awakening")
+                if awk and awk:FindFirstChild("RemoteFunction") then awk.RemoteFunction:InvokeServer(true) end
+            end
+        end
+        if _G.AutoRaceV3_Ability then
+            if IsAlive(char) then
+                local hasA = false
+                for _,v in ipairs(RaceAbils) do if localPlayer.Backpack:FindFirstChild(v) or char:FindFirstChild(v) then hasA = true break end end
+                if hasA then
+                    AbilityCooldown = AbilityCooldown - dt
+                    if AbilityCooldown <= 0 then ReplicatedStorage.Remotes.CommE:FireServer("ActivateAbility"); AbilityCooldown = 0.5 end
+                end
+            end
+        end
+    end)
+end)
+
+AddToggle(CombatTab, "Auto Race V4 (強制変身)", function(s) _G.AutoRaceV4_Force = s end)
+AddToggle(CombatTab, "Auto Race V3 (スキル連打)", function(s) _G.AutoRaceV3_Ability = s end)
+
 -- [[ 6. 潜伏・視点自由化モード ]]
 local StealthActive = false
 local FreezePos, CamPart
@@ -406,3 +1081,52 @@ S_Btn.MouseButton1Click:Connect(function()
 end)
 
 AddToggle(MainTab, "ステルスボタン表示", function(s) S_Gui.Enabled = s end)
+
+AddToggle(CombatTab, "Silent Aimbot (サイレントエイム)", function(s)
+    if s then EnableAimbot() else DisableAimbot() end
+end)
+
+-- [[ 7. GUI切り替えボタンの実装 ]]
+local ToggleButton = Instance.new("ImageButton")
+local Corner = Instance.new("UICorner")
+
+-- ボタンの設定
+ToggleButton.Name = "YAJU_Toggle"
+ToggleButton.Parent = ScreenGui -- 元のコードのScreenGuiを使用
+ToggleButton.Size = UDim2.new(0, 50, 0, 50)
+ToggleButton.Position = UDim2.new(0.02, 0, 0.4, 0) -- 画面左側に配置
+ToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ToggleButton.BorderSizePixel = 0
+ToggleButton.Active = true
+ToggleButton.Draggable = true -- ボタン自体をドラッグで移動可能に
+
+-- ★ ここでアイコン（画像ID）を設定してください
+-- 例: "rbxassetid://6031094678" など
+ToggleButton.Image = "rbxassetid://14963584666" 
+
+Corner.CornerRadius = UDim.new(0, 10)
+Corner.Parent = ToggleButton
+
+-- 初期状態の設定
+local menuVisible = true
+MainFrame.Visible = menuVisible
+
+-- クリックイベント
+ToggleButton.MouseButton1Click:Connect(function()
+    menuVisible = not menuVisible
+    MainFrame.Visible = menuVisible
+    
+    -- 演出：押したときに少しボタンを小さくする
+    ToggleButton:TweenSize(UDim2.new(0, 45, 0, 45), "Out", "Quad", 0.1, true)
+    task.wait(0.1)
+    ToggleButton:TweenSize(UDim2.new(0, 50, 0, 50), "Out", "Quad", 0.1, true)
+end)
+
+-- ドラッグ中にメニューが開かないように調整（モバイル配慮）
+local dragStart, startPos
+ToggleButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragStart = input.Position
+        startPos = ToggleButton.Position
+    end
+end)
