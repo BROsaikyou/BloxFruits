@@ -7,96 +7,70 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UnbreakableActive = false
 local UnbreakableConns = {}
 
--- [[ オートエイム用ロジック（メタテーブルフック版） ]]
-_G.AutoAimbotEnabled = false
+-- [[ オートエイム用ロジック ]]
+local vu34 = nil
+local vu35 = false
+local vu43 = 60
+local vu44 = false
+local vu482 = false
 
-local AimbotState = {
-    Target = nil,
-    isHooked = false
-}
-
-local function getNearestAlivePlayer()
-    local nearest = nil
-    local minDistance = math.huge
-    local myRoot = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
-    
-    if not myRoot then return nil end
-
-    -- プレイヤーをチェック
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= localPlayer and player.Character then
-            local targetRoot = player.Character:FindFirstChild("HumanoidRootPart")
-            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-            
-            if targetRoot and humanoid and humanoid.Health > 0 then
-                local distance = (myRoot.Position - targetRoot.Position).Magnitude
-                if distance < minDistance then
-                    minDistance = distance
-                    nearest = targetRoot
+-- オートエイムトグル
+local function SetupAimbot()
+    spawn(function()
+        while task.wait() do
+            local myChar = localPlayer.Character
+            if not (myChar and myChar:FindFirstChild("HumanoidRootPart")) then
+                vu34 = nil
+                return
+            end
+            local myPos = myChar.HumanoidRootPart.Position
+            local minDist = math.huge
+            local nearestTarget = nil
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= localPlayer then
+                    local targetChar = player.Character
+                    if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+                        local targetPos = targetChar.HumanoidRootPart.Position
+                        local distance = (targetPos - myPos).Magnitude
+                        if distance < minDist then
+                            nearestTarget = targetChar
+                            minDist = distance
+                        end
+                    end
                 end
             end
-        end
-    end
-    
-    -- Enemiesフォルダもチェック
-    local enemiesFolder = workspace:FindFirstChild("Enemies")
-    if enemiesFolder then
-        for _, enemy in ipairs(enemiesFolder:GetChildren()) do
-            if enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
-                local targetRoot = enemy:FindFirstChild("HumanoidRootPart")
-                local distance = (myRoot.Position - targetRoot.Position).Magnitude
-                if distance < minDistance then
-                    minDistance = distance
-                    nearest = targetRoot
-                end
+            if nearestTarget then
+                vu34 = nearestTarget.HumanoidRootPart.Position
+            else
+                vu34 = nil
             end
         end
-    end
-    
-    return nearest
-end
-
-local function EnableAimbot()
-    if AimbotState.isHooked then return end
-    AimbotState.isHooked = true
-    
-    local mt = getrawmetatable(game)
-    local oldNamecall = mt.__namecall
-    setreadonly(mt, false)
-    
-    mt.__namecall = newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        
-        if method == "FireServer" and _G.AutoAimbotEnabled and AimbotState.Target then
-            local args = {...}
-            -- Vector3引数をターゲット位置に置き換え
-            for i, v in ipairs(args) do
-                if typeof(v) == "Vector3" then
-                    args[i] = AimbotState.Target.Position
-                end
-            end
-            return oldNamecall(self, unpack(args))
-        end
-        
-        return oldNamecall(self, ...)
     end)
     
-    setreadonly(mt, true)
-    
-    -- ハートビートでターゲット更新
-    RunService.Heartbeat:Connect(function()
-        if _G.AutoAimbotEnabled then
-            AimbotState.Target = getNearestAlivePlayer()
-        else
-            AimbotState.Target = nil
-        end
+    pcall(function()
+        spawn(function()
+            local mt = getrawmetatable(game)
+            local oldNamecall = mt.__namecall
+            setreadonly(mt, false)
+            mt.__namecall = newcclosure(function(...)
+                local method = getnamecallmethod()
+                local args = {...}
+                if tostring(method) ~= "FireServer" or (tostring(args[1]) ~= "RemoteEvent" or (tostring(args[2]) == "true" or (tostring(args[2]) == "false" or not vu35))) then
+                    return oldNamecall(...)
+                end
+                if type(args[2]) ~= "vector" then
+                    args[2] = CFrame.new(vu34)
+                else
+                    args[2] = vu34
+                end
+                return oldNamecall(unpack(args))
+            end)
+        end)
     end)
 end
 
-local function DisableAimbot()
-    _G.AutoAimbotEnabled = false
-    AimbotState.Target = nil
-end
+-- 初期セットアップ
+SetupAimbot()
 -- [[ 1. 初期設定 & UI基盤 ]]
 local UI_SIZE = UDim2.new(0, 400, 0, 350) 
 local MAIN_BG = Color3.fromRGB(15, 15, 15)
@@ -141,7 +115,7 @@ UserInputService.InputEnded:Connect(function(input) if input.UserInputType == En
 
 -- [[ 3. レイアウト要素 ]]
 local Title = Instance.new("TextLabel")
-Title.Text = "YAJU HUB made by bro"; Title.Font = Enum.Font.GothamBold; Title.TextSize = 16; Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Text = "YAJU HUB"; Title.Font = Enum.Font.GothamBold; Title.TextSize = 16; Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Position = UDim2.new(0, 12, 0, 10); Title.Size = UDim2.new(0, 160, 0, 28); Title.BackgroundTransparency = 1; Title.TextXAlignment = Enum.TextXAlignment.Left; Title.Parent = MainFrame
 
 local Sidebar = Instance.new("Frame")
@@ -1006,65 +980,120 @@ createTBtn("☕", UDim2.new(0, 50, 0, 170), teleportToBean)
 AddToggle(MainTab, "幽霊船GUI表示", function(s) T_Gui.Enabled = s end)
 
 -- --- CombatTab 機能 ---
-_G.FastAttackEnabled = false
-_G.AttackRange = 60
+-- IsAlive判定関数
+local function IsAliveTarget(target)
+    if not target then
+        return false
+    end
+    local humanoid = target:FindFirstChild("Humanoid")
+    if humanoid then
+        return humanoid.Health > 0
+    end
+    return false
+end
 
-local function IsAlive(char) return char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 end
-local function GetNearestTarget(range)
-    local char = localPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
-    local nearest, nearestDist = nil, math.huge
-    local folders = {workspace:FindFirstChild("Enemies"), Players}
-    for _, f in ipairs(folders) do
-        if f then
-            local children = (f == Players) and f:GetPlayers() or f:GetChildren()
-            for _, obj in ipairs(children) do
-                local tChar = (f == Players) and obj.Character or obj
-                if tChar and tChar ~= char and IsAlive(tChar) then
-                    local hrp = tChar:FindFirstChild("HumanoidRootPart")
-                    if hrp then
-                        local dist = (hrp.Position - char.HumanoidRootPart.Position).Magnitude
-                        if dist <= range and dist < nearestDist then
-                            nearest = tChar
-                            nearestDist = dist
-                        end
-                    end
-                end
+-- ターゲット取得関数
+local function GetTargetsInRange(character, range)
+    local myPos = character:GetPivot().Position
+    local targetList = {}
+    
+    -- Enemiesフォルダをチェック
+    for _, enemy in ipairs(workspace.Enemies:GetChildren()) do
+        local enemyHRP = enemy:FindFirstChild("HumanoidRootPart")
+        if enemyHRP and IsAliveTarget(enemy) and (enemyHRP.Position - myPos).Magnitude <= range then
+            table.insert(targetList, enemy)
+        end
+    end
+    
+    -- プレイヤーをチェック
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= localPlayer and player.Character then
+            local playerHRP = player.Character:FindFirstChild("HumanoidRootPart")
+            if playerHRP and IsAliveTarget(player.Character) and (playerHRP.Position - myPos).Magnitude <= range then
+                table.insert(targetList, player.Character)
             end
         end
     end
-    return nearest
+    
+    return targetList
 end
 
+-- 攻撃実行関数
 local function ExecuteAttack()
-    local tool = localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Tool")
-    if not tool then return end
+    local myChar = localPlayer.Character
+    local myHRP = myChar:FindFirstChild("HumanoidRootPart")
+    if not myHRP then
+        return
+    end
     
-    -- ターゲット取得（最も近い敵）
-    local target = GetNearestTarget(_G.AttackRange)
-    if not target then return end
+    -- 按り既を持っているツールを探す
+    local tool = nil
+    for _, child in ipairs(myChar:GetChildren()) do
+        if child:IsA("Tool") then
+            tool = child
+            break
+        end
+    end
+    
+    if not tool then
+        return
+    end
+    
+    -- 範囲を決定
+    if myHRP:FindFirstChild("Buddha") and vu44 then
+        vu43 = 1000
+    else
+        vu43 = 60
+    end
+    
+    -- ターゲット一覧を取得
+    local targetList = GetTargetsInRange(myChar, vu43)
     
     if tool:FindFirstChild("LeftClickRemote") then
-        local hrp = target:FindFirstChild("HumanoidRootPart")
-        if hrp then 
-            local myPos = localPlayer.Character:GetPivot().Position
-            -- 常にターゲット方向に向ける（オートエイムの有無に関わらず）
-            local direction = (hrp.Position - myPos).Unit
-            tool.LeftClickRemote:FireServer(direction, 1) 
+        -- LeftClickRemoteを使用するタイプ
+        for count, target in ipairs(targetList) do
+            local targetHRP = target:FindFirstChild("HumanoidRootPart")
+            if targetHRP then
+                local direction = (targetHRP.Position - myChar:GetPivot().Position).Unit
+                tool.LeftClickRemote:FireServer(direction, count)
+            end
         end
     else
-        if target:FindFirstChild("Head") then
-            local hitList = {{target, target.Head}}
-            local net = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Net")
-            pcall(function() net["RE/RegisterAttack"]:FireServer(0.4); net["RE/RegisterHit"]:FireServer(target.Head, hitList) end)
+        -- Netモジュールを使用するタイプ
+        local hitList = {}
+        local lastHead = nil
+        for _, target in ipairs(targetList) do
+            if not target:GetAttribute("IsBoat") then
+                local head = target:FindFirstChild("Head")
+                if head then
+                    table.insert(hitList, {target, head})
+                    lastHead = head
+                end
+            end
+        end
+        
+        if lastHead then
+            local registerAttack = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RE/RegisterAttack")
+            local registerHit = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Net"):WaitForChild("RE/RegisterHit")
+            pcall(function()
+                registerAttack:FireServer(0.4)
+                registerHit:FireServer(lastHead, hitList)
+            end)
         end
     end
 end
 
-task.spawn(function() while true do if _G.FastAttackEnabled then pcall(ExecuteAttack) end task.wait(0.1) end end)
+-- ファストアタック実行ループ
+task.spawn(function()
+    while task.wait(0.1) do
+        if vu482 then
+            pcall(ExecuteAttack)
+        end
+    end
+end)
 
-AddToggle(CombatTab, "ファストアタック", function(s) _G.FastAttackEnabled = s end)
-AddToggle(CombatTab, "範囲超拡大(大仏限定)", function(s) _G.AttackRange = s and 50000 or 60 end)
+AddToggle(CombatTab, "ファストアタック", function(s) vu482 = s end)
+AddToggle(CombatTab, "範囲超拡大(大仏限定)", function(s) vu44 = s end)
 
 _G.AutoRaceV4_Force = false
 _G.AutoRaceV3_Ability = false
@@ -1130,9 +1159,7 @@ end)
 
 AddToggle(MainTab, "即死GUI表示", function(s) S_Gui.Enabled = s end)
 
-AddToggle(CombatTab, "オートエイム", function(s)
-    if s then EnableAimbot() else DisableAimbot() end
-end)
+AddToggle(CombatTab, "オートエイム", function(s) vu35 = s end)
 
 -- [[ 1. 状態管理用の変数を、GUIの上のほう（LocalPlayerの下など）に置く ]]
 local UnbreakableActive = false
