@@ -974,10 +974,10 @@ _G.FastAttackEnabled = false
 _G.AttackRange = 60
 
 local function IsAlive(char) return char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 end
-local function GetTargetsInRange(range)
+local function GetNearestTarget(range)
     local char = localPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return {} end
-    local targets = {}
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+    local nearest, nearestDist = nil, math.huge
     local folders = {workspace:FindFirstChild("Enemies"), Players}
     for _, f in ipairs(folders) do
         if f then
@@ -986,33 +986,34 @@ local function GetTargetsInRange(range)
                 local tChar = (f == Players) and obj.Character or obj
                 if tChar and tChar ~= char and IsAlive(tChar) then
                     local hrp = tChar:FindFirstChild("HumanoidRootPart")
-                    if hrp and (hrp.Position - char.HumanoidRootPart.Position).Magnitude <= range then table.insert(targets, tChar) end
+                    if hrp then
+                        local dist = (hrp.Position - char.HumanoidRootPart.Position).Magnitude
+                        if dist <= range and dist < nearestDist then
+                            nearest = tChar
+                            nearestDist = dist
+                        end
+                    end
                 end
             end
         end
     end
-    return targets
+    return nearest
 end
 
 local function ExecuteAttack()
     local tool = localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Tool")
     if not tool then return end
-    local targets = GetTargetsInRange(_G.AttackRange)
-    if #targets == 0 then return end
+    local target = GetNearestTarget(_G.AttackRange)
+    if not target then return end
+    
     if tool:FindFirstChild("LeftClickRemote") then
-        for i, t in ipairs(targets) do
-            local hrp = t:FindFirstChild("HumanoidRootPart")
-            if hrp then tool.LeftClickRemote:FireServer((hrp.Position - localPlayer.Character:GetPivot().Position).Unit, i) end
-        end
+        local hrp = target:FindFirstChild("HumanoidRootPart")
+        if hrp then tool.LeftClickRemote:FireServer((hrp.Position - localPlayer.Character:GetPivot().Position).Unit, 1) end
     else
-        local hitList = {}
-        local lastPart
-        for _, t in ipairs(targets) do
-            if not t:GetAttribute("IsBoat") and t:FindFirstChild("Head") then table.insert(hitList, {t, t.Head}); lastPart = t.Head end
-        end
-        if lastPart then
+        if target:FindFirstChild("Head") then
+            local hitList = {{target, target.Head}}
             local net = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Net")
-            pcall(function() net["RE/RegisterAttack"]:FireServer(0.4); net["RE/RegisterHit"]:FireServer(lastPart, hitList) end)
+            pcall(function() net["RE/RegisterAttack"]:FireServer(0.4); net["RE/RegisterHit"]:FireServer(target.Head, hitList) end)
         end
     end
 end
