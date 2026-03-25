@@ -17,10 +17,21 @@ local function getNearest()
     local near, dist = nil, math.huge
     local myRoot = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myRoot then return nil end
+    -- プレイヤーをチェック
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= localPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
             local d = (myRoot.Position - p.Character.HumanoidRootPart.Position).Magnitude
             if d < dist then dist = d; near = p.Character.HumanoidRootPart end
+        end
+    end
+    -- Enemiesフォルダもチェック
+    local enemiesFolder = workspace:FindFirstChild("Enemies")
+    if enemiesFolder then
+        for _, enemy in ipairs(enemiesFolder:GetChildren()) do
+            if enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                local d = (myRoot.Position - enemy.HumanoidRootPart.Position).Magnitude
+                if d < dist then dist = d; near = enemy.HumanoidRootPart end
+            end
         end
     end
     return near
@@ -1003,12 +1014,27 @@ end
 local function ExecuteAttack()
     local tool = localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Tool")
     if not tool then return end
-    local target = GetNearestTarget(_G.AttackRange)
+    
+    -- オートエイムが有効なら優先的にそのターゲットを使う（メタテーブル干渉を避ける）
+    local target
+    if AimState.isHooked and AimState.Target then
+        -- オートエイムのターゲット用HumanoidRootPartから親を取得
+        target = AimState.Target.Parent
+    else
+        -- 通常のターゲット検出
+        target = GetNearestTarget(_G.AttackRange)
+    end
+    
     if not target then return end
     
     if tool:FindFirstChild("LeftClickRemote") then
         local hrp = target:FindFirstChild("HumanoidRootPart")
-        if hrp then tool.LeftClickRemote:FireServer((hrp.Position - localPlayer.Character:GetPivot().Position).Unit, 1) end
+        if hrp then 
+            -- ベクトル計算を直接行い、メタテーブルの干渉を回避
+            local myPos = localPlayer.Character:GetPivot().Position
+            local direction = (hrp.Position - myPos).Unit
+            tool.LeftClickRemote:FireServer(direction, 1) 
+        end
     else
         if target:FindFirstChild("Head") then
             local hitList = {{target, target.Head}}
