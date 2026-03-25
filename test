@@ -992,9 +992,8 @@ local function ExecuteAttack()
         local hrp = target:FindFirstChild("HumanoidRootPart")
         if hrp then 
             local myPos = localPlayer.Character:GetPivot().Position
-            -- オートエイムが有効なら自動でターゲットの方に向ける
-            local direction = (_G.AutoAimbotEnabled and hrp.Position or myPos) - myPos
-            direction = direction.Magnitude > 0 and direction.Unit or Vector3.new(0, 0, -1)
+            -- 常にターゲット方向に向ける
+            local direction = (hrp.Position - myPos).Unit
             tool.LeftClickRemote:FireServer(direction, 1) 
         end
     else
