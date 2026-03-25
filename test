@@ -169,43 +169,14 @@ end
 
 -- [[ 4. カテゴリ設定 ]]
 local MainTab = CreateTab("Main", true)
-local CombatTab = CreateTab("Combat", false)
-local HaritsukiTab = CreateTab("張り付き", false)
-local ScriptTab = CreateTab("Scripts", false)
--- [[ 4. カテゴリ設定 (追記・修正部分) ]]
-local ESPTab = CreateTab("ESP", false) -- ESPタブを新規作成
 -- [[ Playerカテゴリの作成 ]]
 local PlayerTab = CreateTab("Player", false)
+local CombatTab = CreateTab("Combat", false)
+-- [[ 4. カテゴリ設定 (追記・修正部分) ]]
+local ESPTab = CreateTab("ESP", false) -- ESPタブを新規作成
+local HaritsukiTab = CreateTab("張り付き", false)
+local ScriptTab = CreateTab("Scripts", false)
 
--- --- Change Team (強化版チーム切替) ---
-AddScriptButton(PlayerTab, "Change Team (チーム切替)", "海賊と海軍を交互に切り替えます", function()
-    local player = game:GetService("Players").LocalPlayer
-    local rs = game:GetService("ReplicatedStorage")
-    
-    -- リモートイベントの取得を強化
-    local remotes = rs:FindFirstChild("Remotes")
-    local commF = remotes and remotes:FindFirstChild("CommF_")
-    
-    if commF then
-        pcall(function()
-            -- 現在のチーム判定（Teamオブジェクトがない場合も考慮）
-            local myTeam = player.Team and player.Team.Name or ""
-            
-            if not string.find(myTeam, "Pirates") then
-                -- 海賊でないなら海賊へ
-                commF:InvokeServer("SetTeam", "Pirates")
-            else
-                -- 海賊なら海軍へ
-                commF:InvokeServer("SetTeam", "Marines")
-            end
-        end)
-    else
-        -- 見つからない場合の予備手段（直接パス指定）
-        pcall(function()
-            rs.Remotes.CommF_:InvokeServer("SetTeam", "Pirates")
-        end)
-    end
-end)
 -- 状態管理変数
 local WS_Enabled = false
 local WS_Value = 16
@@ -258,7 +229,7 @@ local function AddPlayerSetting(page, text, defaultVal, onUpdate)
 end
 
 -- --- 2. UI要素の配置 ---
-AddToggle(PlayerTab, "Noclip (壁抜け)", function(state)
+AddToggle(PlayerTab, "壁抜け", function(state)
     noclipEnabled = state
     if not state and localPlayer.Character then
         for _, part in pairs(localPlayer.Character:GetDescendants()) do
@@ -267,7 +238,7 @@ AddToggle(PlayerTab, "Noclip (壁抜け)", function(state)
     end
 end)
 
-AddPlayerSetting(PlayerTab, "WalkSpeed (速度)", 16, function(en, val)
+AddPlayerSetting(PlayerTab, "歩行速度変更", 16, function(en, val)
     WS_Enabled = en
     WS_Value = val
     -- OFF時に標準速度へリセット
@@ -276,7 +247,7 @@ AddPlayerSetting(PlayerTab, "WalkSpeed (速度)", 16, function(en, val)
     end
 end)
 
-AddPlayerSetting(PlayerTab, "JumpPower (ジャンプ)", 50, function(en, val)
+AddPlayerSetting(PlayerTab, "ジャンプ力変更", 50, function(en, val)
     JP_Enabled = en
     JP_Value = val
     -- OFF時に標準ジャンプ力へリセット
@@ -285,6 +256,36 @@ AddPlayerSetting(PlayerTab, "JumpPower (ジャンプ)", 50, function(en, val)
         hum.JumpPower = 50
         -- 一部のゲームではJumpHeightを使っている場合があるため両方リセット
         if hum:FindFirstChild("JumpHeight") then hum.JumpHeight = 7.2 end 
+    end
+end)
+
+-- --- Change Team (強化版チーム切替) ---
+AddScriptButton(PlayerTab, "チーム変更", "海賊/海軍を切り替えます", function()
+    local player = game:GetService("Players").LocalPlayer
+    local rs = game:GetService("ReplicatedStorage")
+    
+    -- リモートイベントの取得を強化
+    local remotes = rs:FindFirstChild("Remotes")
+    local commF = remotes and remotes:FindFirstChild("CommF_")
+    
+    if commF then
+        pcall(function()
+            -- 現在のチーム判定（Teamオブジェクトがない場合も考慮）
+            local myTeam = player.Team and player.Team.Name or ""
+            
+            if not string.find(myTeam, "Pirates") then
+                -- 海賊でないなら海賊へ
+                commF:InvokeServer("SetTeam", "Pirates")
+            else
+                -- 海賊なら海軍へ
+                commF:InvokeServer("SetTeam", "Marines")
+            end
+        end)
+    else
+        -- 見つからない場合の予備手段（直接パス指定）
+        pcall(function()
+            rs.Remotes.CommF_:InvokeServer("SetTeam", "Pirates")
+        end)
     end
 end)
 
@@ -327,11 +328,11 @@ local ESP_Settings = {
 }
 
 -- ESPタブにトグルを追加
-AddToggle(ESPTab, "Box (ボックス表示)", function(s) ESP_Settings.Box = s end)
-AddToggle(ESPTab, "Tracer (トラッカー表示)", function(s) ESP_Settings.Tracer = s end)
-AddToggle(ESPTab, "Name (名前表示)", function(s) ESP_Settings.Name = s end)
-AddToggle(ESPTab, "Health (体力表示)", function(s) ESP_Settings.Health = s end)
-AddToggle(ESPTab, "Distance (距離表示)", function(s) ESP_Settings.Distance = s end)
+AddToggle(ESPTab, "ボックス表示", function(s) ESP_Settings.Box = s end)
+AddToggle(ESPTab, "トラッカー表示", function(s) ESP_Settings.Tracer = s end)
+AddToggle(ESPTab, "名前表示", function(s) ESP_Settings.Name = s end)
+AddToggle(ESPTab, "体力表示", function(s) ESP_Settings.Health = s end)
+AddToggle(ESPTab, "距離表示", function(s) ESP_Settings.Distance = s end)
 
 -- ESPメインロジック (提供されたコードを最適化して組み込み)
 local function createESP(player)
@@ -846,7 +847,7 @@ ResetBtn.Size = UDim2.new(0.95, 0, 0, 38); ResetBtn.BackgroundColor3 = Color3.fr
 Instance.new("UICorner", ResetBtn)
 
 local TargetTPBtn = Instance.new("TextButton")
-TargetTPBtn.Size = UDim2.new(0.95, 0, 0, 38); TargetTPBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50); TargetTPBtn.Text = "ターゲットにTP (Y1, Z4)"; TargetTPBtn.Font = Enum.Font.GothamBold; TargetTPBtn.TextSize = 13; TargetTPBtn.TextColor3 = Color3.fromRGB(255, 255, 255); TargetTPBtn.Parent = HaritsukiTab
+TargetTPBtn.Size = UDim2.new(0.95, 0, 0, 38); TargetTPBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50); TargetTPBtn.Text = "船に乗せる(Miracle限定)"; TargetTPBtn.Font = Enum.Font.GothamBold; TargetTPBtn.TextSize = 13; TargetTPBtn.TextColor3 = Color3.fromRGB(255, 255, 255); TargetTPBtn.Parent = HaritsukiTab
 Instance.new("UICorner", TargetTPBtn)
 
 TargetTPBtn.MouseButton1Click:Connect(function()
