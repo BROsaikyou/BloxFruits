@@ -8,10 +8,9 @@ local UnbreakableActive = false
 local UnbreakableConns = {}
 
 -- [[ サイレントエイム用ロジック（追加分） ]]
-local AimState = { Target = nil, isHooked = false, Connection = nil }
+local AimState = { Target = nil, isHooked = false, Connection = nil, AimbotEnabled = false }
 local mt = getrawmetatable(game)
 local oldNamecall = mt.__namecall
-local oldIndex = mt.__index
 
 local function getNearest()
     local near, dist = nil, math.huge
@@ -21,7 +20,7 @@ local function getNearest()
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= localPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
             local d = (myRoot.Position - p.Character.HumanoidRootPart.Position).Magnitude
-            if d < dist then dist = d; near = p.Character.HumanoidRootPart end
+            if d < dist then dist = d; near = p.Character.HumanoidRootPart.Position end
         end
     end
     -- Enemiesフォルダもチェック
@@ -30,7 +29,7 @@ local function getNearest()
         for _, enemy in ipairs(enemiesFolder:GetChildren()) do
             if enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
                 local d = (myRoot.Position - enemy.HumanoidRootPart.Position).Magnitude
-                if d < dist then dist = d; near = enemy.HumanoidRootPart end
+                if d < dist then dist = d; near = enemy.HumanoidRootPart.Position end
             end
         end
     end
@@ -39,38 +38,41 @@ end
 
 local function EnableAimbot()
     if AimState.isHooked then return end
+    AimState.AimbotEnabled = true
     setreadonly(mt, false)
     mt.__namecall = newcclosure(function(self, ...)
         local method = getnamecallmethod()
         local args = {...}
-        if method == "FireServer" and AimState.Target then
-            for i, v in ipairs(args) do if typeof(v) == "Vector3" then args[i] = AimState.Target.Position end end
-            return oldNamecall(self, unpack(args))
+        
+        -- AimbotがONで、ターゲットが存在する場合のみ干渉
+        if method == "FireServer" and AimState.AimbotEnabled and AimState.Target then
+            -- Vector3オブジェクトを検出して置き換え
+            for i, v in ipairs(args) do 
+                if typeof(v) == "Vector3" then 
+                    args[i] = AimState.Target
+                end 
+            end
         end
-        return oldNamecall(self, ...)
-    end)
-    mt.__index = newcclosure(function(self, key)
-        if key == "FireServer" then
-            return newcclosure(function(remote, ...)
-                local args = {...}
-                if AimState.Target then for i, v in ipairs(args) do if typeof(v) == "Vector3" then args[i] = AimState.Target.Position end end end
-                return oldNamecall(remote, unpack(args))
-            end)
-        end
-        return oldIndex(self, key)
+        return oldNamecall(self, unpack(args))
     end)
     setreadonly(mt, true)
-    AimState.Connection = RunService.Heartbeat:Connect(function() AimState.Target = getNearest() end)
+    
+    -- ハートビートで常にターゲット更新
+    AimState.Connection = RunService.Heartbeat:Connect(function() 
+        AimState.Target = getNearest()
+    end)
     AimState.isHooked = true
 end
 
 local function DisableAimbot()
     if not AimState.isHooked then return end
+    AimState.AimbotEnabled = false
     setreadonly(mt, false)
-    mt.__namecall = oldNamecall; mt.__index = oldIndex
+    mt.__namecall = oldNamecall
     setreadonly(mt, true)
     if AimState.Connection then AimState.Connection:Disconnect() end
-    AimState.Target = nil; AimState.isHooked = false
+    AimState.Target = nil
+    AimState.isHooked = false
 end
 -- [[ 1. 初期設定 & UI基盤 ]]
 local UI_SIZE = UDim2.new(0, 400, 0, 350) 
@@ -1015,22 +1017,13 @@ local function ExecuteAttack()
     local tool = localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Tool")
     if not tool then return end
     
-    -- オートエイムが有効なら優先的にそのターゲットを使う（メタテーブル干渉を避ける）
-    local target
-    if AimState.isHooked and AimState.Target then
-        -- オートエイムのターゲット用HumanoidRootPartから親を取得
-        target = AimState.Target.Parent
-    else
-        -- 通常のターゲット検出
-        target = GetNearestTarget(_G.AttackRange)
-    end
-    
+    -- ターゲット取得（最も近い敵）
+    local target = GetNearestTarget(_G.AttackRange)
     if not target then return end
     
     if tool:FindFirstChild("LeftClickRemote") then
         local hrp = target:FindFirstChild("HumanoidRootPart")
         if hrp then 
-            -- ベクトル計算を直接行い、メタテーブルの干渉を回避
             local myPos = localPlayer.Character:GetPivot().Position
             local direction = (hrp.Position - myPos).Unit
             tool.LeftClickRemote:FireServer(direction, 1) 
