@@ -7,10 +7,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UnbreakableActive = false
 local UnbreakableConns = {}
 
--- [[ サイレントエイム用ロジック（追加分） ]]
-local AimState = { Target = nil, isHooked = false, Connection = nil, AimbotEnabled = false }
-local mt = getrawmetatable(game)
-local oldNamecall = mt.__namecall
+-- [[ オートエイム用ロジック（シンプル版 - メタテーブルフックなし） ]]
+_G.AutoAimbotEnabled = false
 
 local function getNearest()
     local near, dist = nil, math.huge
@@ -37,61 +35,11 @@ local function getNearest()
 end
 
 local function EnableAimbot()
-    if AimState.isHooked then return end
-    AimState.AimbotEnabled = true
-    setreadonly(mt, false)
-    mt.__namecall = newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        
-        -- オートエイムが無効の場合、元の処理に任せる
-        if not AimState.AimbotEnabled or not AimState.Target then
-            return oldNamecall(self, ...)
-        end
-        
-        -- 特定のリモート（エイム関連）のみに干渉
-        if method == "FireServer" then
-            local args = {...}
-            local remoteName = tostring(self)
-            
-            -- エイム関連のリモート判定（LeftClickRemoteなど特定のものだけ）
-            if string.find(remoteName, "LeftClick") or string.find(remoteName, "Target") then
-                -- 最初のVector3のみを置き換え（複数置き換えない）
-                for i = 1, #args do
-                    if typeof(args[i]) == "Vector3" and not AimState._replaced then
-                        local targetPos = AimState.Target
-                        local myPos = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") and localPlayer.Character.HumanoidRootPart.Position
-                        if myPos then
-                            args[i] = (targetPos - myPos).Unit  -- 方向ベクトルに変換
-                            AimState._replaced = true
-                        end
-                        break  -- 最初のVector3だけ置き換え
-                    end
-                end
-                AimState._replaced = false
-            end
-            return oldNamecall(self, unpack(args))
-        end
-        
-        return oldNamecall(self, ...)
-    end)
-    setreadonly(mt, true)
-    
-    -- ハートビートで常にターゲット更新
-    AimState.Connection = RunService.Heartbeat:Connect(function() 
-        AimState.Target = getNearest()
-    end)
-    AimState.isHooked = true
+    _G.AutoAimbotEnabled = true
 end
 
 local function DisableAimbot()
-    if not AimState.isHooked then return end
-    AimState.AimbotEnabled = false
-    setreadonly(mt, false)
-    mt.__namecall = oldNamecall
-    setreadonly(mt, true)
-    if AimState.Connection then AimState.Connection:Disconnect() end
-    AimState.Target = nil
-    AimState.isHooked = false
+    _G.AutoAimbotEnabled = false
 end
 -- [[ 1. 初期設定 & UI基盤 ]]
 local UI_SIZE = UDim2.new(0, 400, 0, 350) 
@@ -1044,7 +992,9 @@ local function ExecuteAttack()
         local hrp = target:FindFirstChild("HumanoidRootPart")
         if hrp then 
             local myPos = localPlayer.Character:GetPivot().Position
-            local direction = (hrp.Position - myPos).Unit
+            -- オートエイムが有効なら自動でターゲットの方に向ける
+            local direction = (_G.AutoAimbotEnabled and hrp.Position or myPos) - myPos
+            direction = direction.Magnitude > 0 and direction.Unit or Vector3.new(0, 0, -1)
             tool.LeftClickRemote:FireServer(direction, 1) 
         end
     else
