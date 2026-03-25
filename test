@@ -85,7 +85,7 @@ UserInputService.InputEnded:Connect(function(input) if input.UserInputType == En
 
 -- [[ 3. レイアウト要素 ]]
 local Title = Instance.new("TextLabel")
-Title.Text = "YAJU HUB Made by BROsaikyou"; Title.Font = Enum.Font.GothamBold; Title.TextSize = 16; Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Text = "YAJU HUB"; Title.Font = Enum.Font.GothamBold; Title.TextSize = 16; Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Position = UDim2.new(0, 12, 0, 10); Title.Size = UDim2.new(0, 160, 0, 28); Title.BackgroundTransparency = 1; Title.TextXAlignment = Enum.TextXAlignment.Left; Title.Parent = MainFrame
 
 local Sidebar = Instance.new("Frame")
