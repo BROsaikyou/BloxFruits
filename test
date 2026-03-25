@@ -42,18 +42,37 @@ local function EnableAimbot()
     setreadonly(mt, false)
     mt.__namecall = newcclosure(function(self, ...)
         local method = getnamecallmethod()
-        local args = {...}
         
-        -- AimbotがONで、ターゲットが存在する場合のみ干渉
-        if method == "FireServer" and AimState.AimbotEnabled and AimState.Target then
-            -- Vector3オブジェクトを検出して置き換え
-            for i, v in ipairs(args) do 
-                if typeof(v) == "Vector3" then 
-                    args[i] = AimState.Target
-                end 
-            end
+        -- オートエイムが無効の場合、元の処理に任せる
+        if not AimState.AimbotEnabled or not AimState.Target then
+            return oldNamecall(self, ...)
         end
-        return oldNamecall(self, unpack(args))
+        
+        -- 特定のリモート（エイム関連）のみに干渉
+        if method == "FireServer" then
+            local args = {...}
+            local remoteName = tostring(self)
+            
+            -- エイム関連のリモート判定（LeftClickRemoteなど特定のものだけ）
+            if string.find(remoteName, "LeftClick") or string.find(remoteName, "Target") then
+                -- 最初のVector3のみを置き換え（複数置き換えない）
+                for i = 1, #args do
+                    if typeof(args[i]) == "Vector3" and not AimState._replaced then
+                        local targetPos = AimState.Target
+                        local myPos = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") and localPlayer.Character.HumanoidRootPart.Position
+                        if myPos then
+                            args[i] = (targetPos - myPos).Unit  -- 方向ベクトルに変換
+                            AimState._replaced = true
+                        end
+                        break  -- 最初のVector3だけ置き換え
+                    end
+                end
+                AimState._replaced = false
+            end
+            return oldNamecall(self, unpack(args))
+        end
+        
+        return oldNamecall(self, ...)
     end)
     setreadonly(mt, true)
     
@@ -118,7 +137,7 @@ UserInputService.InputEnded:Connect(function(input) if input.UserInputType == En
 
 -- [[ 3. レイアウト要素 ]]
 local Title = Instance.new("TextLabel")
-Title.Text = "YAJU HUB made by BROsaikyou"; Title.Font = Enum.Font.GothamBold; Title.TextSize = 16; Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Text = "YAJU HUB"; Title.Font = Enum.Font.GothamBold; Title.TextSize = 16; Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Position = UDim2.new(0, 12, 0, 10); Title.Size = UDim2.new(0, 160, 0, 28); Title.BackgroundTransparency = 1; Title.TextXAlignment = Enum.TextXAlignment.Left; Title.Parent = MainFrame
 
 local Sidebar = Instance.new("Frame")
