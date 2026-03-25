@@ -13,38 +13,60 @@ local vu35 = false
 local vu43 = 60
 local vu44 = false
 local vu482 = false
+local aimbotLoopActive = false
 
 -- オートエイムトグル
 local function SetupAimbot()
-    spawn(function()
-        while task.wait() do
-            local myChar = localPlayer.Character
-            if not (myChar and myChar:FindFirstChild("HumanoidRootPart")) then
-                vu34 = nil
-                return
-            end
-            local myPos = myChar.HumanoidRootPart.Position
-            local minDist = math.huge
-            local nearestTarget = nil
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player ~= localPlayer then
-                    local targetChar = player.Character
-                    if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
-                        local targetPos = targetChar.HumanoidRootPart.Position
-                        local distance = (targetPos - myPos).Magnitude
-                        if distance < minDist then
-                            nearestTarget = targetChar
-                            minDist = distance
+    local function startAimbotLoop()
+        aimbotLoopActive = true
+        spawn(function()
+            while aimbotLoopActive and task.wait() do
+                local myChar = localPlayer.Character
+                if not (myChar and myChar:FindFirstChild("HumanoidRootPart")) then
+                    break
+                end
+                -- StealthModeがONの時はターゲット検索をスキップ
+                if StealthActive then
+                    vu34 = nil
+                    continue
+                end
+                local myPos = myChar.HumanoidRootPart.Position
+                local minDist = math.huge
+                local nearestTarget = nil
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= localPlayer then
+                        local targetChar = player.Character
+                        if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+                            local targetPos = targetChar.HumanoidRootPart.Position
+                            -- 異常に低い位置（地下・即死モード）はスキップ
+                            if targetPos.Y < -1000 then
+                                continue
+                            end
+                            local distance = (targetPos - myPos).Magnitude
+                            if distance < minDist then
+                                nearestTarget = targetChar
+                                minDist = distance
+                            end
                         end
                     end
                 end
+                if nearestTarget then
+                    vu34 = nearestTarget.HumanoidRootPart.Position
+                else
+                    vu34 = nil
+                end
             end
-            if nearestTarget then
-                vu34 = nearestTarget.HumanoidRootPart.Position
-            else
-                vu34 = nil
-            end
-        end
+        end)
+    end
+    
+    -- 初期実行
+    startAimbotLoop()
+    
+    -- キャラ変更時に再実行
+    localPlayer.CharacterAdded:Connect(function()
+        aimbotLoopActive = false
+        task.wait(0.1)
+        startAimbotLoop()
     end)
     
     pcall(function()
@@ -902,7 +924,14 @@ H_Main.Size = UDim2.new(0, 70, 0, 70); H_Main.Position = UDim2.new(0.5, -35, 0.8
 Instance.new("UICorner", H_Main)
 
 local h_drag, h_start, h_mStart, h_moved
-H_Main.MouseButton1Down:Connect(function() if not H_BtnLocked then h_drag = true; h_start = UserInputService:GetMouseLocation(); h_mStart = H_Main.Position; h_moved = false end end)
+H_Main.MouseButton1Down:Connect(function() 
+    h_moved = false  -- 常に初期化
+    if not H_BtnLocked then 
+        h_drag = true
+        h_start = UserInputService:GetMouseLocation()
+        h_mStart = H_Main.Position
+    end 
+end)
 UserInputService.InputChanged:Connect(function(input)
     if h_drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = UserInputService:GetMouseLocation() - h_start
@@ -1041,7 +1070,7 @@ local function ExecuteAttack()
     
     -- 範囲を決定
     if myHRP:FindFirstChild("Buddha") and vu44 then
-        vu43 = 1000
+        vu43 = 50000
     else
         vu43 = 60
     end
@@ -1115,7 +1144,7 @@ RunService.Heartbeat:Connect(function(dt)
             end
         end
         if _G.AutoRaceV3_Ability then
-            if IsAlive(char) then
+            if IsAliveTarget(char) then
                 local hasA = false
                 for _,v in ipairs(RaceAbils) do if localPlayer.Backpack:FindFirstChild(v) or char:FindFirstChild(v) then hasA = true break end end
                 if hasA then
@@ -1151,9 +1180,21 @@ S_Btn.MouseButton1Click:Connect(function()
         end)
     else
         StealthActive = false; S_Btn.Text = "OFF"; S_Btn.TextColor3 = Color3.new(1,1,1)
-        if CamPart then CamPart:Destroy() end
+        if CamPart then CamPart:Destroy(); CamPart = nil end
         char.HumanoidRootPart.CFrame = FreezePos
         if char:FindFirstChild("Humanoid") then workspace.CurrentCamera.CameraSubject = char.Humanoid end
+    end
+end)
+
+-- キャラが死んだ時にStealthModeを自動的にOFF
+localPlayer.CharacterAdded:Connect(function(newChar)
+    if StealthActive then
+        StealthActive = false
+        S_Btn.Text = "OFF"
+        S_Btn.TextColor3 = Color3.new(1,1,1)
+        if CamPart then CamPart:Destroy(); CamPart = nil end
+        newChar:WaitForChild("Humanoid")
+        workspace.CurrentCamera.CameraSubject = newChar.Humanoid
     end
 end)
 
