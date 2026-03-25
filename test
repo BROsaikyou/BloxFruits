@@ -984,6 +984,9 @@ local function ExecuteAttack()
     local tool = localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Tool")
     if not tool then return end
     
+    -- オートエイムが有効な場合のみ実行
+    if not _G.AutoAimbotEnabled then return end
+    
     -- ターゲット取得（最も近い敵）
     local target = GetNearestTarget(_G.AttackRange)
     if not target then return end
@@ -992,7 +995,7 @@ local function ExecuteAttack()
         local hrp = target:FindFirstChild("HumanoidRootPart")
         if hrp then 
             local myPos = localPlayer.Character:GetPivot().Position
-            -- 常にターゲット方向に向ける
+            -- ターゲット方向に向ける
             local direction = (hrp.Position - myPos).Unit
             tool.LeftClickRemote:FireServer(direction, 1) 
         end
