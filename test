@@ -7,39 +7,95 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UnbreakableActive = false
 local UnbreakableConns = {}
 
--- [[ オートエイム用ロジック（シンプル版 - メタテーブルフックなし） ]]
+-- [[ オートエイム用ロジック（メタテーブルフック版） ]]
 _G.AutoAimbotEnabled = false
 
-local function getNearest()
-    local near, dist = nil, math.huge
+local AimbotState = {
+    Target = nil,
+    isHooked = false
+}
+
+local function getNearestAlivePlayer()
+    local nearest = nil
+    local minDistance = math.huge
     local myRoot = localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart")
+    
     if not myRoot then return nil end
+
     -- プレイヤーをチェック
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= localPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
-            local d = (myRoot.Position - p.Character.HumanoidRootPart.Position).Magnitude
-            if d < dist then dist = d; near = p.Character.HumanoidRootPart.Position end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= localPlayer and player.Character then
+            local targetRoot = player.Character:FindFirstChild("HumanoidRootPart")
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            
+            if targetRoot and humanoid and humanoid.Health > 0 then
+                local distance = (myRoot.Position - targetRoot.Position).Magnitude
+                if distance < minDistance then
+                    minDistance = distance
+                    nearest = targetRoot
+                end
+            end
         end
     end
+    
     -- Enemiesフォルダもチェック
     local enemiesFolder = workspace:FindFirstChild("Enemies")
     if enemiesFolder then
         for _, enemy in ipairs(enemiesFolder:GetChildren()) do
             if enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
-                local d = (myRoot.Position - enemy.HumanoidRootPart.Position).Magnitude
-                if d < dist then dist = d; near = enemy.HumanoidRootPart.Position end
+                local targetRoot = enemy:FindFirstChild("HumanoidRootPart")
+                local distance = (myRoot.Position - targetRoot.Position).Magnitude
+                if distance < minDistance then
+                    minDistance = distance
+                    nearest = targetRoot
+                end
             end
         end
     end
-    return near
+    
+    return nearest
 end
 
 local function EnableAimbot()
-    _G.AutoAimbotEnabled = true
+    if AimbotState.isHooked then return end
+    AimbotState.isHooked = true
+    
+    local mt = getrawmetatable(game)
+    local oldNamecall = mt.__namecall
+    setreadonly(mt, false)
+    
+    mt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        
+        if method == "FireServer" and _G.AutoAimbotEnabled and AimbotState.Target then
+            local args = {...}
+            -- Vector3引数をターゲット位置に置き換え
+            for i, v in ipairs(args) do
+                if typeof(v) == "Vector3" then
+                    args[i] = AimbotState.Target.Position
+                end
+            end
+            return oldNamecall(self, unpack(args))
+        end
+        
+        return oldNamecall(self, ...)
+    end)
+    
+    setreadonly(mt, true)
+    
+    -- ハートビートでターゲット更新
+    RunService.Heartbeat:Connect(function()
+        if _G.AutoAimbotEnabled then
+            AimbotState.Target = getNearestAlivePlayer()
+        else
+            AimbotState.Target = nil
+        end
+    end)
 end
 
 local function DisableAimbot()
     _G.AutoAimbotEnabled = false
+    AimbotState.Target = nil
 end
 -- [[ 1. 初期設定 & UI基盤 ]]
 local UI_SIZE = UDim2.new(0, 400, 0, 350) 
@@ -984,9 +1040,6 @@ local function ExecuteAttack()
     local tool = localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Tool")
     if not tool then return end
     
-    -- オートエイムが有効な場合のみ実行
-    if not _G.AutoAimbotEnabled then return end
-    
     -- ターゲット取得（最も近い敵）
     local target = GetNearestTarget(_G.AttackRange)
     if not target then return end
@@ -995,7 +1048,7 @@ local function ExecuteAttack()
         local hrp = target:FindFirstChild("HumanoidRootPart")
         if hrp then 
             local myPos = localPlayer.Character:GetPivot().Position
-            -- ターゲット方向に向ける
+            -- 常にターゲット方向に向ける（オートエイムの有無に関わらず）
             local direction = (hrp.Position - myPos).Unit
             tool.LeftClickRemote:FireServer(direction, 1) 
         end
