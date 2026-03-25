@@ -62,7 +62,7 @@ local function DisableAimbot()
     AimState.Target = nil; AimState.isHooked = false
 end
 -- [[ 1. 初期設定 & UI基盤 ]]
-local UI_SIZE = UDim2.new(0, 400, 0, 300) 
+local UI_SIZE = UDim2.new(0, 400, 0, 350) 
 local MAIN_BG = Color3.fromRGB(15, 15, 15)
 local ACCENT_COLOR = Color3.fromRGB(0, 140, 255)
 
@@ -74,7 +74,7 @@ ScreenGui.Parent = localPlayer:WaitForChild("PlayerGui")
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UI_SIZE
-MainFrame.Position = UDim2.new(0.5, -382, 0.5, -255)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -175)
 MainFrame.BackgroundColor3 = MAIN_BG
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -105,25 +105,25 @@ UserInputService.InputEnded:Connect(function(input) if input.UserInputType == En
 
 -- [[ 3. レイアウト要素 ]]
 local Title = Instance.new("TextLabel")
-Title.Text = "YAJU HUB"; Title.Font = Enum.Font.GothamBold; Title.TextSize = 28; Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Position = UDim2.new(0, 25, 0, 25); Title.Size = UDim2.new(0, 300, 0, 40); Title.BackgroundTransparency = 1; Title.TextXAlignment = Enum.TextXAlignment.Left; Title.Parent = MainFrame
+Title.Text = "YAJU HUB"; Title.Font = Enum.Font.GothamBold; Title.TextSize = 16; Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Position = UDim2.new(0, 12, 0, 10); Title.Size = UDim2.new(0, 160, 0, 28); Title.BackgroundTransparency = 1; Title.TextXAlignment = Enum.TextXAlignment.Left; Title.Parent = MainFrame
 
 local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 200, 1, -100); Sidebar.Position = UDim2.new(0, 10, 0, 85); Sidebar.BackgroundTransparency = 1; Sidebar.Parent = MainFrame
+Sidebar.Size = UDim2.new(0, 120, 1, -75); Sidebar.Position = UDim2.new(0, 8, 0, 65); Sidebar.BackgroundTransparency = 1; Sidebar.Parent = MainFrame
 Instance.new("UIListLayout", Sidebar).Padding = UDim.new(0, 10)
 
 local Container = Instance.new("Frame")
-Container.Size = UDim2.new(1, -230, 1, -110); Container.Position = UDim2.new(0, 215, 0, 95); Container.BackgroundColor3 = Color3.fromRGB(22, 22, 22); Container.Parent = MainFrame
+Container.Size = UDim2.new(1, -138, 1, -90); Container.Position = UDim2.new(0, 130, 0, 75); Container.BackgroundColor3 = Color3.fromRGB(22, 22, 22); Container.Parent = MainFrame
 Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 15)
 
 local tabPages, tabButtons = {}, {}
 
 local function AddToggle(page, text, callback)
     local TFrame = Instance.new("TextButton")
-    TFrame.Size = UDim2.new(0.95, 0, 0, 50); TFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30); TFrame.Text = ""; TFrame.AutoButtonColor = false; TFrame.Parent = page
+    TFrame.Size = UDim2.new(0.95, 0, 0, 40); TFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30); TFrame.Text = ""; TFrame.AutoButtonColor = false; TFrame.Parent = page
     Instance.new("UICorner", TFrame).CornerRadius = UDim.new(0, 12)
     local TLabel = Instance.new("TextLabel")
-    TLabel.Text = text; TLabel.Font = Enum.Font.GothamSemibold; TLabel.TextSize = 18; TLabel.TextColor3 = Color3.fromRGB(255, 255, 255); TLabel.Position = UDim2.new(0, 15, 0, 0); TLabel.Size = UDim2.new(0.6, 0, 1, 0); TLabel.BackgroundTransparency = 1; TLabel.TextXAlignment = Enum.TextXAlignment.Left; TLabel.Parent = TFrame
+    TLabel.Text = text; TLabel.Font = Enum.Font.GothamSemibold; TLabel.TextSize = 14; TLabel.TextColor3 = Color3.fromRGB(255, 255, 255); TLabel.Position = UDim2.new(0, 12, 0, 0); TLabel.Size = UDim2.new(0.6, 0, 1, 0); TLabel.BackgroundTransparency = 1; TLabel.TextXAlignment = Enum.TextXAlignment.Left; TLabel.Parent = TFrame
     local Switch = Instance.new("Frame")
     Switch.Size = UDim2.new(0, 44, 0, 22); Switch.Position = UDim2.new(1, -60, 0.5, -11); Switch.BackgroundColor3 = Color3.fromRGB(60, 60, 60); Switch.Parent = TFrame
     Instance.new("UICorner", Switch).CornerRadius = UDim.new(1, 0)
@@ -142,19 +142,19 @@ end
 -- スクリプト実行ボタン用関数
 local function AddScriptButton(page, text, desc, callback)
     local SFrame = Instance.new("TextButton")
-    SFrame.Size = UDim2.new(0.65, 0, 0, 35); SFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35); SFrame.Text = ""; SFrame.AutoButtonColor = true; SFrame.Parent = page
+    SFrame.Size = UDim2.new(0.95, 0, 0, 52); SFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35); SFrame.Text = ""; SFrame.AutoButtonColor = true; SFrame.Parent = page
     Instance.new("UICorner", SFrame).CornerRadius = UDim.new(0, 12)
     local STitle = Instance.new("TextLabel")
-    STitle.Text = text; STitle.Font = Enum.Font.GothamBold; STitle.TextSize = 16; STitle.TextColor3 = ACCENT_COLOR; STitle.Position = UDim2.new(0, 15, 0, 10); STitle.Size = UDim2.new(0.9, 0, 0, 14); STitle.BackgroundTransparency = 1; STitle.TextXAlignment = Enum.TextXAlignment.Left; STitle.Parent = SFrame
+    STitle.Text = text; STitle.Font = Enum.Font.GothamBold; STitle.TextSize = 13; STitle.TextColor3 = ACCENT_COLOR; STitle.Position = UDim2.new(0, 12, 0, 5); STitle.Size = UDim2.new(0.9, 0, 0, 18); STitle.BackgroundTransparency = 1; STitle.TextXAlignment = Enum.TextXAlignment.Left; STitle.Parent = SFrame
     local SDesc = Instance.new("TextLabel")
-    SDesc.Text = desc; SDesc.Font = Enum.Font.Gotham; SDesc.TextSize = 12; SDesc.TextColor3 = Color3.fromRGB(200, 200, 200); SDesc.Position = UDim2.new(0, 15, 0, 30); SDesc.Size = UDim2.new(0.9, 0, 0, 14); SDesc.BackgroundTransparency = 1; SDesc.TextXAlignment = Enum.TextXAlignment.Left; SDesc.Parent = SFrame
+    SDesc.Text = desc; SDesc.Font = Enum.Font.Gotham; SDesc.TextSize = 10; SDesc.TextColor3 = Color3.fromRGB(200, 200, 200); SDesc.Position = UDim2.new(0, 12, 0, 25); SDesc.Size = UDim2.new(0.9, 0, 0, 15); SDesc.BackgroundTransparency = 1; SDesc.TextXAlignment = Enum.TextXAlignment.Left; SDesc.Parent = SFrame
     SFrame.MouseButton1Click:Connect(callback)
 end
 
 local function CreateTab(name, isFirst)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 45); btn.BackgroundColor3 = isFirst and ACCENT_COLOR or Color3.fromRGB(30, 30, 30)
-    btn.Text = name; btn.Font = Enum.Font.GothamBold; btn.TextSize = 18; btn.TextColor3 = Color3.fromRGB(255, 255, 255); btn.Parent = Sidebar
+    btn.Size = UDim2.new(1, 0, 0, 38); btn.BackgroundColor3 = isFirst and ACCENT_COLOR or Color3.fromRGB(30, 30, 30)
+    btn.Text = name; btn.Font = Enum.Font.GothamBold; btn.TextSize = 13; btn.TextColor3 = Color3.fromRGB(255, 255, 255); btn.Parent = Sidebar
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
     local page = Instance.new("ScrollingFrame")
     page.Size = UDim2.new(1, -20, 1, -20); page.Position = UDim2.new(0, 10, 0, 10); page.BackgroundTransparency = 1; page.Visible = isFirst; page.AutomaticCanvasSize = Enum.AutomaticSize.Y; page.ScrollBarThickness = 0; page.Parent = Container
@@ -216,19 +216,19 @@ local noclipEnabled = false
 -- --- 1. スイッチと入力がセットになった統合パーツ ---
 local function AddPlayerSetting(page, text, defaultVal, onUpdate)
     local Frame = Instance.new("Frame")
-    Frame.Size = UDim2.new(0.65, 0, 0, 35); Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30); Frame.Parent = page
+    Frame.Size = UDim2.new(0.95, 0, 0, 50); Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30); Frame.Parent = page
     Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 12)
 
     local Label = Instance.new("TextLabel")
-    Label.Text = text; Label.Font = Enum.Font.GothamSemibold; Label.TextSize = 16
+    Label.Text = text; Label.Font = Enum.Font.GothamSemibold; Label.TextSize = 13
     Label.TextColor3 = Color3.new(1,1,1); Label.BackgroundTransparency = 1
-    Label.Position = UDim2.new(0, 15, 0, 0); Label.Size = UDim2.new(0.4, 0, 1, 0)
+    Label.Position = UDim2.new(0, 12, 0, 0); Label.Size = UDim2.new(0.4, 0, 1, 0)
     Label.TextXAlignment = Enum.TextXAlignment.Left; Label.Parent = Frame
 
     local Input = Instance.new("TextBox")
-    Input.Size = UDim2.new(0, 70, 0, 30); Input.Position = UDim2.new(1, -140, 0.5, -15)
+    Input.Size = UDim2.new(0, 60, 0, 26); Input.Position = UDim2.new(1, -125, 0.5, -13)
     Input.BackgroundColor3 = Color3.fromRGB(45, 45, 45); Input.Text = tostring(defaultVal)
-    Input.TextColor3 = Color3.new(1, 1, 1); Input.Font = Enum.Font.Gotham; Input.TextSize = 14; Input.Parent = Frame
+    Input.TextColor3 = Color3.new(1, 1, 1); Input.Font = Enum.Font.Gotham; Input.TextSize = 12; Input.Parent = Frame
     Instance.new("UICorner", Input).CornerRadius = UDim.new(0, 6)
 
     local Switch = Instance.new("TextButton")
@@ -345,7 +345,7 @@ local function createESP(player)
 
     -- テキスト設定
     for _, txt in pairs({NameL, HealthL, DistL}) do
-        txt.Size = (txt == NameL) and 24 or 20
+        txt.Size = (txt == NameL) and 18 or 14
         txt.Center = true
         txt.Outline = true
         txt.Visible = false
@@ -842,11 +842,11 @@ end)
 local H_TargetName, H_Mode, H_Active, H_Speed, H_BtnLocked = "", "TP", false, 300, false
 
 local ResetBtn = Instance.new("TextButton")
-ResetBtn.Size = UDim2.new(0.95, 0, 0, 45); ResetBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50); ResetBtn.Text = "ターゲット解除"; ResetBtn.Font = Enum.Font.GothamBold; ResetBtn.TextSize = 18; ResetBtn.TextColor3 = Color3.fromRGB(255, 255, 255); ResetBtn.Parent = HaritsukiTab
+ResetBtn.Size = UDim2.new(0.95, 0, 0, 38); ResetBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50); ResetBtn.Text = "ターゲット解除"; ResetBtn.Font = Enum.Font.GothamBold; ResetBtn.TextSize = 14; ResetBtn.TextColor3 = Color3.fromRGB(255, 255, 255); ResetBtn.Parent = HaritsukiTab
 Instance.new("UICorner", ResetBtn)
 
 local TargetTPBtn = Instance.new("TextButton")
-TargetTPBtn.Size = UDim2.new(0.95, 0, 0, 45); TargetTPBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50); TargetTPBtn.Text = "ターゲットにTP (Y1, Z4)"; TargetTPBtn.Font = Enum.Font.GothamBold; TargetTPBtn.TextSize = 18; TargetTPBtn.TextColor3 = Color3.fromRGB(255, 255, 255); TargetTPBtn.Parent = HaritsukiTab
+TargetTPBtn.Size = UDim2.new(0.95, 0, 0, 38); TargetTPBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50); TargetTPBtn.Text = "ターゲットにTP (Y1, Z4)"; TargetTPBtn.Font = Enum.Font.GothamBold; TargetTPBtn.TextSize = 13; TargetTPBtn.TextColor3 = Color3.fromRGB(255, 255, 255); TargetTPBtn.Parent = HaritsukiTab
 Instance.new("UICorner", TargetTPBtn)
 
 TargetTPBtn.MouseButton1Click:Connect(function()
@@ -862,7 +862,7 @@ TargetTPBtn.MouseButton1Click:Connect(function()
 end)
 
 local H_Scroll = Instance.new("ScrollingFrame")
-H_Scroll.Size = UDim2.new(0.95, 0, 0, 200); H_Scroll.BackgroundColor3 = Color3.fromRGB(15, 15, 15); H_Scroll.Parent = HaritsukiTab
+H_Scroll.Size = UDim2.new(0.95, 0, 0, 160); H_Scroll.BackgroundColor3 = Color3.fromRGB(15, 15, 15); H_Scroll.Parent = HaritsukiTab
 Instance.new("UIListLayout", H_Scroll).Padding = UDim.new(0, 8); Instance.new("UICorner", H_Scroll)
 
 local function H_Refresh()
@@ -870,9 +870,9 @@ local function H_Refresh()
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= localPlayer then
             local b = Instance.new("TextButton")
-            b.Size = UDim2.new(0.95, 0, 0, 55)
+            b.Size = UDim2.new(0.95, 0, 0, 45)
             b.BackgroundColor3 = (H_TargetName == p.Name) and ACCENT_COLOR or Color3.fromRGB(35, 35, 35)
-            b.Text = p.DisplayName .. " (@" .. p.Name .. ")"; b.Font = Enum.Font.GothamBold; b.TextSize = 20; b.TextColor3 = Color3.fromRGB(255, 255, 255); b.Parent = H_Scroll
+            b.Text = p.DisplayName .. " (@" .. p.Name .. ")"; b.Font = Enum.Font.GothamBold; b.TextSize = 13; b.TextColor3 = Color3.fromRGB(255, 255, 255); b.Parent = H_Scroll
             Instance.new("UICorner", b)
             b.MouseButton1Click:Connect(function() H_TargetName = p.Name H_Refresh() end)
         end
@@ -887,7 +887,7 @@ AddToggle(HaritsukiTab, "HARIボタン固定", function(s) H_BtnLocked = s end)
 
 local H_Gui = Instance.new("ScreenGui"); H_Gui.Enabled = false; H_Gui.Parent = localPlayer.PlayerGui
 local H_Main = Instance.new("TextButton")
-H_Main.Size = UDim2.new(0, 80, 0, 80); H_Main.Position = UDim2.new(0.5, -40, 0.8, 0); H_Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); H_Main.Text = "HARI"; H_Main.Font = Enum.Font.GothamBold; H_Main.TextSize = 20; H_Main.TextColor3 = Color3.fromRGB(200, 50, 50); H_Main.AutoButtonColor = false; H_Main.Parent = H_Gui
+H_Main.Size = UDim2.new(0, 70, 0, 70); H_Main.Position = UDim2.new(0.5, -35, 0.8, 0); H_Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); H_Main.Text = "HARI"; H_Main.Font = Enum.Font.GothamBold; H_Main.TextSize = 16; H_Main.TextColor3 = Color3.fromRGB(200, 50, 50); H_Main.AutoButtonColor = false; H_Main.Parent = H_Gui
 Instance.new("UICorner", H_Main)
 
 local h_drag, h_start, h_mStart, h_moved
@@ -960,7 +960,7 @@ end)
 
 local T_Gui = Instance.new("ScreenGui"); T_Gui.Name = "TeleportGui"; T_Gui.ResetOnSpawn = false; T_Gui.Enabled = false; T_Gui.Parent = localPlayer.PlayerGui
 local function createTBtn(txt, pos, func)
-    local b = Instance.new("TextButton", T_Gui); b.Size = UDim2.new(0, 50, 0, 50); b.Position = pos; b.BackgroundColor3 = Color3.fromRGB(15, 15, 15); b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.TextSize = 20; b.Draggable = true
+    local b = Instance.new("TextButton", T_Gui); b.Size = UDim2.new(0, 45, 0, 45); b.Position = pos; b.BackgroundColor3 = Color3.fromRGB(15, 15, 15); b.Text = txt; b.TextColor3 = Color3.new(1,1,1); b.TextSize = 18; b.Draggable = true
     Instance.new("UICorner", b); b.MouseButton1Click:Connect(func)
 end
 createTBtn("👻", UDim2.new(0, 50, 0, 100), teleportToGhost)
@@ -1061,7 +1061,7 @@ local StealthActive = false
 local FreezePos, CamPart
 local HIDE_Y = -199996
 local S_Gui = Instance.new("ScreenGui"); S_Gui.Name = "StealthViewGui"; S_Gui.ResetOnSpawn = false; S_Gui.Enabled = false; S_Gui.Parent = localPlayer.PlayerGui
-local S_Btn = Instance.new("TextButton", S_Gui); S_Btn.Size = UDim2.new(0, 50, 0, 50); S_Btn.Position = UDim2.new(0.5, -25, 0.5, 50); S_Btn.BackgroundColor3 = Color3.fromRGB(15,15,15); S_Btn.Text = "OFF"; S_Btn.TextColor3 = Color3.new(1,1,1); S_Btn.Font = Enum.Font.GothamBold; S_Btn.TextSize = 14; S_Btn.Draggable = true
+local S_Btn = Instance.new("TextButton", S_Gui); S_Btn.Size = UDim2.new(0, 45, 0, 45); S_Btn.Position = UDim2.new(0.5, -22, 0.5, 50); S_Btn.BackgroundColor3 = Color3.fromRGB(15,15,15); S_Btn.Text = "OFF"; S_Btn.TextColor3 = Color3.new(1,1,1); S_Btn.Font = Enum.Font.GothamBold; S_Btn.TextSize = 12; S_Btn.Draggable = true
 
 S_Btn.MouseButton1Click:Connect(function()
     local char = localPlayer.Character
@@ -1140,7 +1140,7 @@ local Corner = Instance.new("UICorner")
 -- ボタンの設定
 ToggleButton.Name = "YAJU_Toggle"
 ToggleButton.Parent = ScreenGui -- 元のコードのScreenGuiを使用
-ToggleButton.Size = UDim2.new(0, 50, 0, 50)
+ToggleButton.Size = UDim2.new(0, 40, 0, 40)
 ToggleButton.Position = UDim2.new(0.02, 0, 0.4, 0) -- 画面左側に配置
 ToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 ToggleButton.BorderSizePixel = 0
@@ -1151,7 +1151,7 @@ ToggleButton.Draggable = true -- ボタン自体をドラッグで移動可能�
 -- 例: "rbxassetid://6031094678" など
 ToggleButton.Image = "rbxassetid://14963584666" 
 
-Corner.CornerRadius = UDim.new(0, 10)
+Corner.CornerRadius = UDim.new(0, 8)
 Corner.Parent = ToggleButton
 
 -- 初期状態の設定
@@ -1164,9 +1164,9 @@ ToggleButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = menuVisible
     
     -- 演出：押したときに少しボタンを小さくする
-    ToggleButton:TweenSize(UDim2.new(0, 45, 0, 45), "Out", "Quad", 0.1, true)
+    ToggleButton:TweenSize(UDim2.new(0, 36, 0, 36), "Out", "Quad", 0.1, true)
     task.wait(0.1)
-    ToggleButton:TweenSize(UDim2.new(0, 50, 0, 50), "Out", "Quad", 0.1, true)
+    ToggleButton:TweenSize(UDim2.new(0, 40, 0, 40), "Out", "Quad", 0.1, true)
 end)
 
 -- ドラッグ中にメニューが開かないように調整（モバイル配慮）
