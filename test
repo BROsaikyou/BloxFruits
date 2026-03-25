@@ -884,11 +884,11 @@ ResetBtn.MouseButton1Click:Connect(function() H_TargetName = ""; H_Refresh() end
 Players.PlayerAdded:Connect(H_Refresh); Players.PlayerRemoving:Connect(H_Refresh)
 
 AddToggle(HaritsukiTab, "Tweenモード", function(s) H_Mode = s and "Tween" or "TP" end)
-AddToggle(HaritsukiTab, "HARIボタン固定", function(s) H_BtnLocked = s end)
+AddToggle(HaritsukiTab, "張り付きボタン固定", function(s) H_BtnLocked = s end)
 
 local H_Gui = Instance.new("ScreenGui"); H_Gui.Enabled = false; H_Gui.Parent = localPlayer.PlayerGui
 local H_Main = Instance.new("TextButton")
-H_Main.Size = UDim2.new(0, 70, 0, 70); H_Main.Position = UDim2.new(0.5, -35, 0.8, 0); H_Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); H_Main.Text = "HARI"; H_Main.Font = Enum.Font.GothamBold; H_Main.TextSize = 16; H_Main.TextColor3 = Color3.fromRGB(200, 50, 50); H_Main.AutoButtonColor = false; H_Main.Parent = H_Gui
+H_Main.Size = UDim2.new(0, 70, 0, 70); H_Main.Position = UDim2.new(0.5, -35, 0.8, 0); H_Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15); H_Main.Text = "張り付き"; H_Main.Font = Enum.Font.GothamBold; H_Main.TextSize = 16; H_Main.TextColor3 = Color3.fromRGB(200, 50, 50); H_Main.AutoButtonColor = false; H_Main.Parent = H_Gui
 Instance.new("UICorner", H_Main)
 
 local h_drag, h_start, h_mStart, h_moved
@@ -967,7 +967,7 @@ end
 createTBtn("👻", UDim2.new(0, 50, 0, 100), teleportToGhost)
 createTBtn("☕", UDim2.new(0, 50, 0, 170), teleportToBean)
 
-AddToggle(MainTab, "テレポートボタン表示", function(s) T_Gui.Enabled = s end)
+AddToggle(MainTab, "幽霊船GUI表示", function(s) T_Gui.Enabled = s end)
 
 -- --- CombatTab 機能 ---
 _G.FastAttackEnabled = false
@@ -1019,8 +1019,8 @@ end
 
 task.spawn(function() while true do if _G.FastAttackEnabled then pcall(ExecuteAttack) end task.wait(0.1) end end)
 
-AddToggle(CombatTab, "Fast Attack (自動攻撃)", function(s) _G.FastAttackEnabled = s end)
-AddToggle(CombatTab, "Super Range (射程 5万)", function(s) _G.AttackRange = s and 50000 or 60 end)
+AddToggle(CombatTab, "ファストアタック", function(s) _G.FastAttackEnabled = s end)
+AddToggle(CombatTab, "範囲超拡大(大仏限定)", function(s) _G.AttackRange = s and 50000 or 60 end)
 
 _G.AutoRaceV4_Force = false
 _G.AutoRaceV3_Ability = false
@@ -1054,8 +1054,8 @@ RunService.Heartbeat:Connect(function(dt)
     end)
 end)
 
-AddToggle(CombatTab, "Auto Race V4 (強制変身)", function(s) _G.AutoRaceV4_Force = s end)
-AddToggle(CombatTab, "Auto Race V3 (スキル連打)", function(s) _G.AutoRaceV3_Ability = s end)
+AddToggle(CombatTab, "V3自動使用", function(s) _G.AutoRaceV3_Ability = s end)
+AddToggle(CombatTab, "V4自動使用", function(s) _G.AutoRaceV4_Force = s end)
 
 -- [[ 6. 潜伏・視点自由化モード ]]
 local StealthActive = false
@@ -1084,9 +1084,9 @@ S_Btn.MouseButton1Click:Connect(function()
     end
 end)
 
-AddToggle(MainTab, "ステルスボタン表示", function(s) S_Gui.Enabled = s end)
+AddToggle(MainTab, "即死GUI表示", function(s) S_Gui.Enabled = s end)
 
-AddToggle(CombatTab, "Silent Aimbot (サイレントエイム)", function(s)
+AddToggle(CombatTab, "オートエイム", function(s)
     if s then EnableAimbot() else DisableAimbot() end
 end)
 
