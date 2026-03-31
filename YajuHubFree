@@ -1,0 +1,149 @@
+local API = "https://3297a67e-d77c-4b33-bfda-4c7669aa0f64-00-23x0njsy7ads1.pike.replit.dev:3000/verify?key="
+local LINK = "https://link-target.net/4703627/Aye4qKyLfYEZ"
+local SCRIPT = "https://raw.githubusercontent.com/BROsaikyou/BloxFruits/refs/heads/main/YajuHub"
+
+local hwid = game:GetService("RbxAnalyticsService"):GetClientId()
+
+-- GUI
+local gui = Instance.new("ScreenGui", game.CoreGui)
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,340,0,230)
+frame.Position = UDim2.new(0.5,-170,0.5,-115)
+frame.BackgroundColor3 = Color3.fromRGB(18,18,18)
+
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
+
+local stroke = Instance.new("UIStroke", frame)
+stroke.Color = Color3.fromRGB(100,0,255)
+stroke.Thickness = 1.5
+
+-- タイトル
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,45)
+title.Text = "Key System"
+title.TextColor3 = Color3.fromRGB(200,200,255)
+title.BackgroundTransparency = 1
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+
+-- 入力欄
+local box = Instance.new("TextBox", frame)
+box.Size = UDim2.new(0.8,0,0,40)
+box.Position = UDim2.new(0.1,0,0.3,0)
+box.PlaceholderText = "Enter Key..."
+box.BackgroundColor3 = Color3.fromRGB(30,30,30)
+box.TextColor3 = Color3.new(1,1,1)
+box.TextScaled = true
+box.Font = Enum.Font.Gotham
+
+Instance.new("UICorner", box).CornerRadius = UDim.new(0,8)
+
+-- Submitボタン
+local submit = Instance.new("TextButton", frame)
+submit.Size = UDim2.new(0.8,0,0,40)
+submit.Position = UDim2.new(0.1,0,0.55,0)
+submit.Text = "Submit"
+submit.BackgroundColor3 = Color3.fromRGB(100,0,255)
+submit.TextColor3 = Color3.new(1,1,1)
+submit.TextScaled = true
+submit.Font = Enum.Font.GothamBold
+
+Instance.new("UICorner", submit).CornerRadius = UDim.new(0,8)
+
+-- Get Keyボタン
+local getKey = Instance.new("TextButton", frame)
+getKey.Size = UDim2.new(0.8,0,0,30)
+getKey.Position = UDim2.new(0.1,0,0.8,0)
+getKey.Text = "Get Key"
+getKey.BackgroundColor3 = Color3.fromRGB(40,40,40)
+getKey.TextColor3 = Color3.new(1,1,1)
+getKey.TextScaled = true
+getKey.Font = Enum.Font.Gotham
+
+Instance.new("UICorner", getKey).CornerRadius = UDim.new(0,8)
+
+-- ステータス
+local status = Instance.new("TextLabel", frame)
+status.Size = UDim2.new(1,0,0,20)
+status.Position = UDim2.new(0,0,0.9,0)
+status.BackgroundTransparency = 1
+status.TextColor3 = Color3.fromRGB(180,180,255)
+status.TextScaled = true
+status.Font = Enum.Font.Gotham
+
+-- ホバー演出
+local function hover(btn, color)
+    btn.MouseEnter:Connect(function()
+        btn.BackgroundColor3 = color
+    end)
+    btn.MouseLeave:Connect(function()
+        btn.BackgroundColor3 = btn.Name == "submit" and Color3.fromRGB(100,0,255) or Color3.fromRGB(40,40,40)
+    end)
+end
+
+submit.Name = "submit"
+hover(submit, Color3.fromRGB(130,50,255))
+hover(getKey, Color3.fromRGB(60,60,60))
+
+-- Get Key
+getKey.MouseButton1Click:Connect(function()
+    setclipboard(LINK)
+    status.Text = "Link copied!"
+end)
+
+-- verify
+local function verify(key)
+    local url = API .. key .. "&hwid=" .. hwid
+    
+    local success, res = pcall(function()
+        return game:HttpGet(url)
+    end)
+
+    if success then
+        return res
+    else
+        return "error"
+    end
+end
+
+-- 自動ログイン
+if isfile and readfile and isfile("key.txt") then
+    local saved = readfile("key.txt")
+    if verify(saved) == "valid" then
+        status.Text = "Auto Login..."
+        task.wait(1)
+        gui:Destroy()
+        loadstring(game:HttpGet(SCRIPT))()
+    end
+end
+
+-- Submit
+submit.MouseButton1Click:Connect(function()
+    local key = box.Text
+    status.Text = "Checking..."
+
+    local result = verify(key)
+
+    if result == "valid" then
+        status.Text = "Success!"
+        writefile("key.txt", key)
+        task.wait(1)
+        gui:Destroy()
+        
+        -- 🔥 メインスクリプト実行
+        loadstring(game:HttpGet(SCRIPT))()
+
+    elseif result == "expired" then
+        status.Text = "Expired"
+
+    elseif result == "hwid_mismatch" then
+        status.Text = "Wrong Device"
+
+    elseif result == "ip_mismatch" then
+        status.Text = "Wrong Network"
+
+    else
+        status.Text = "Invalid Key"
+    end
+end)
