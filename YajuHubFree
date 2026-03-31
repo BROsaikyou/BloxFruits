@@ -28,7 +28,7 @@ title.TextScaled = true
 title.Font = Enum.Font.GothamBold
 
 -- 入力欄
-local box = Instance.new("TextBox", frame)
+local box = Instance.new("Enter Key...", frame)
 box.Size = UDim2.new(0.8,0,0,40)
 box.Position = UDim2.new(0.1,0,0.3,0)
 box.PlaceholderText = "Enter Key..."
